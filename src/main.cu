@@ -98,7 +98,25 @@ secondKernel(int numElements, int *input)
     }
 }
 
+__global__ void
+setupKernel(int length, int *bitMask){
+	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
 
+	unsigned long* bitMask_long = reinterpret_cast<unsigned long*>(bitMask);
+
+	if (elementId < length * 8 * sizeof(unsigned long)){
+		int threadSum = __popc(bitMask_long(elementId));
+
+		using BlockScan = cub::BlockScan<int, 128>;
+
+		__shared__ typename BlockScan::TempStorage temp_storage;
+
+		BlockScan(temp_storage).ExclusiveSum(threadSum, threadSum);
+
+		printf("post: %d - %d\n", elementId, threadSum);
+	}
+
+}
 
 
 //
@@ -143,7 +161,7 @@ int main(int argc, char *argv[])
     cudaMemcpy(d_bitmask, h_bitmask, static_cast<size_t>(numElements * sizeof(*d_bitmask)), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
 
-    simpleKernel<<<1, 128>>>(numElements, d_bitmask);
+    setupKernel<<<1, 128>>>(numElements * 8 * sizeof(int), d_bitmask);
 
     // Synchronize
     cudaDeviceSynchronize();
