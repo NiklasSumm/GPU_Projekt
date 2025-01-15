@@ -105,7 +105,9 @@ setupKernel(int length, int *bitMask){
 	unsigned long* bitMask_long = reinterpret_cast<unsigned long*>(bitMask);
 
 	if (elementId < length / (8 * sizeof(unsigned long))){
-		printf("%d", bitMask_long[elementId]);
+		printf("%d\n", bitMask[2 * elementId]);
+		printf("%d\n", bitMask[2 * elementId + 1]);
+		printf("%d\n\n", bitMask_long[elementId]);
 
 		int threadSum = __popc(bitMask_long[elementId]);
 
