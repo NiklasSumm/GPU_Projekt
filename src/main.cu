@@ -102,9 +102,9 @@ __global__ void
 setupKernel(int length, int *bitMask){
 	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
 
-	unsigned long* bitMask_long = reinterpret_cast<unsigned long*>(bitMask);
+	long* bitMask_long = reinterpret_cast<long*>(bitMask);
 
-	if (elementId < length / (8 * sizeof(unsigned long))){
+	if (elementId < length / (8 * sizeof(long))){
 		printf("% d - %d - %d\n",bitMask[2 * elementId], bitMask[2 * elementId + 1], bitMask_long[elementId]);
 
 		int threadSum = __popc(bitMask_long[elementId]);
