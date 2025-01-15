@@ -105,7 +105,7 @@ setupKernel(int length, int *bitMask){
 	unsigned long* bitMask_long = reinterpret_cast<unsigned long*>(bitMask);
 
 	if (elementId < length * 8 * sizeof(unsigned long)){
-		int threadSum = __popc(bitMask_long(elementId));
+		int threadSum = __popc(bitMask_long[elementId]);
 
 		using BlockScan = cub::BlockScan<int, 128>;
 
