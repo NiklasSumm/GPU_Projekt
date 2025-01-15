@@ -115,7 +115,7 @@ setupKernel(int length, int *bitMask){
 
 		BlockScan(temp_storage).ExclusiveSum(threadSum, threadSum);
 
-		//printf("post: %d - %d\n", elementId, threadSum);
+		printf("post: %d - %d\n", elementId, threadSum);
 	}
 
 }
