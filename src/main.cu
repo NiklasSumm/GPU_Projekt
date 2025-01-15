@@ -92,7 +92,7 @@ secondKernel(int numElements, int *input)
         printf("pre: %d - %d\n", elementId, thread_data);
 				
 		// Collectively compute the block-wide exclusive prefix max scan
-        BlockScan(temp_storage).ExclusiveSum(thread_data, thread_data);
+        //BlockScan(temp_storage).ExclusiveSum(thread_data, thread_data);
 
         printf("post: %d - %d\n", elementId, thread_data);
     }
