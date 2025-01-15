@@ -105,6 +105,8 @@ setupKernel(int length, int *bitMask){
 	unsigned long* bitMask_long = reinterpret_cast<unsigned long*>(bitMask);
 
 	if (elementId < length * 8 * sizeof(unsigned long)){
+		printf("%d", bitMask_long[elementId]);
+
 		int threadSum = __popc(bitMask_long[elementId]);
 
 		using BlockScan = cub::BlockScan<int, 128>;
@@ -113,7 +115,7 @@ setupKernel(int length, int *bitMask){
 
 		BlockScan(temp_storage).ExclusiveSum(threadSum, threadSum);
 
-		printf("post: %d - %d\n", elementId, threadSum);
+		//printf("post: %d - %d\n", elementId, threadSum);
 	}
 
 }
