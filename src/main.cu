@@ -152,8 +152,10 @@ int main(int argc, char *argv[])
 
     int *h_bitmask;
     cudaMallocHost(&h_bitmask, static_cast<size_t>(numElements * sizeof(*h_bitmask)));
+    h_bitmask[0] = 23256;
     h_bitmask[1] = 2;
     h_bitmask[3] = 5;
+    h_bitmask[4] = 248;
 
     //
     // Copy Data to the Device
