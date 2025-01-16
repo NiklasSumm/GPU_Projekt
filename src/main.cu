@@ -156,6 +156,9 @@ int main(int argc, char *argv[])
     h_bitmask[1] = 2;
     h_bitmask[3] = 5;
     h_bitmask[4] = 248;
+    if (numElements > 128){
+        h_bitmask[128] = 19464;
+    }
 
     //
     // Copy Data to the Device
@@ -165,7 +168,7 @@ int main(int argc, char *argv[])
     cudaMemcpy(d_bitmask, h_bitmask, static_cast<size_t>(numElements * sizeof(*d_bitmask)), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
 
-    setupKernel<<<1, 128>>>(numElements * 8 * sizeof(int), d_bitmask);
+    setupKernel<<<2, 128>>>(numElements * 8 * sizeof(int), d_bitmask);
 
     // Synchronize
     cudaDeviceSynchronize();
