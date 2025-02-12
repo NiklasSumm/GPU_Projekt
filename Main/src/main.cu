@@ -121,7 +121,7 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		//	}
 		//}
 		int o = layer4Size / 2;
-		int layerSum = layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];;
+		int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];;
 		for (int i = layer4Size/4; i > 0; i >>= 1){
 			o = (layerSum < bitsToFind) ? o + i : o - i;
 			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];
@@ -215,7 +215,7 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		bitmaskOffset *= 32;
 
 		// Handle virtual layer 0 (before bitmask)
-		int layerSum;
+		layerSum = 0;
 		long bitmaskSection;
 		int vLayerOffset = 0;
 		for (; vLayerOffset < 32; vLayerOffset++) {
