@@ -112,14 +112,16 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		int layer4Size = (bitmaskSize+1024*1024-1) / (1024*1024);
 		int layer4Offset = bitmaskSize*2 + ((bitmaskSize+31)/32 + 1)/2 + (bitmaskSize+1023) / 1024 + (bitmaskSize+1024*32-1) / (1024*32);
 		int offsetLayer3 = 0; // Offset inside layer 3 due to layer 4 selection
-		//for (int i = layer4Size-1; i > 0; i--) {
-		//	int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+i];
-		//	if (layerSum < bitsToFind) {
-		//		bitsToFind -= layerSum;
-		//		offsetLayer3 = i;
-		//		break;
-		//	}
-		//}
+		int idx;
+		for (int i = layer4Size-1; i > 0; i--) {
+			int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+i];
+			if (layerSum < bitsToFind) {
+				//bitsToFind -= layerSum;
+				//offsetLayer3 = i;
+				idx = i;
+				break;
+			}
+		}
 		int o = layer4Size / 2;
 		int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];;
 		for (int i = layer4Size/4; i > 0; i >>= 1){
@@ -133,6 +135,10 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		bitsToFind -= layerSum;
 		offsetLayer3 = o;
 		int bitmaskOffset = offsetLayer3 * 32;
+
+		if (elementIdx % 512 == 0){
+			printf("%i - %i\n", o, idx);
+		}
 
 		// Handle layer 3
 		int layer3Size = (bitmaskSize+1024*32-1) / (1024*32) - offsetLayer3 * 32;
