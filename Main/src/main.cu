@@ -112,14 +112,26 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		int layer4Size = (bitmaskSize+1024*1024-1) / (1024*1024);
 		int layer4Offset = bitmaskSize*2 + ((bitmaskSize+31)/32 + 1)/2 + (bitmaskSize+1023) / 1024 + (bitmaskSize+1024*32-1) / (1024*32);
 		int offsetLayer3 = 0; // Offset inside layer 3 due to layer 4 selection
-		for (int i = layer4Size-1; i > 0; i--) {
-			int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+i];
-			if (layerSum < bitsToFind) {
-				bitsToFind -= layerSum;
-				offsetLayer3 = i;
-				break;
-			}
+		//for (int i = layer4Size-1; i > 0; i--) {
+		//	int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+i];
+		//	if (layerSum < bitsToFind) {
+		//		bitsToFind -= layerSum;
+		//		offsetLayer3 = i;
+		//		break;
+		//	}
+		//}
+		int o = layer4Size / 2;
+		int layerSum = 0;
+		for (int i = layer4Size/4; i > 0; i = (i + 1)/2){
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];
+			o = (layerSum < bitsToFind) ? o + i : o - i;
 		}
+		if (layerSum >= bitsToFind){
+			o--;
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];
+		}
+		bitsToFind -= layerSum;
+		offsetLayer3 = o;
 		int bitmaskOffset = offsetLayer3 * 32;
 
 		// Handle layer 3
@@ -127,14 +139,26 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		if (layer3Size > 32) layer3Size = 32;
 		int layer3Offset = bitmaskSize*2 + ((bitmaskSize+31)/32 + 1)/2 + (bitmaskSize+1023) / 1024 + offsetLayer3 * 32;
 		int offsetLayer2 = 0; // Offset inside layer 2 due to layer 3 selection
-		for (int i = layer3Size-1; i > 0; i--) {
-			int layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+i];
-			if (layerSum < bitsToFind) {
-				bitsToFind -= layerSum;
-				bitmaskOffset += i;
-				break;
-			}
+		//for (int i = layer3Size-1; i > 0; i--) {
+		//	int layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+i];
+		//	if (layerSum < bitsToFind) {
+		//		bitsToFind -= layerSum;
+		//		bitmaskOffset += i;
+		//		break;
+		//	}
+		//}
+		o = layer3Size / 2;
+		layerSum = 0;
+		for (int i = layer3Size/4; i > 0; i = (i + 1)/2){
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+o];
+			o = (layerSum < bitsToFind) ? o + i : o - i;
 		}
+		if (layerSum >= bitsToFind){
+			o--;
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+o];
+		}
+		bitsToFind -= layerSum;
+		bitmaskOffset += o;
 		bitmaskOffset *= 32;
 
 		// Handle layer 2
@@ -142,28 +166,52 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		if (layer2Size > 32) layer2Size = 32;
 		int layer2Offset = bitmaskSize*2 + ((bitmaskSize+31)/32 + 1)/2 + offsetLayer2 * 32;
 		int offsetLayer1 = 0; // Offset inside layer 1 due to layer 2 selection
-		for (int i = layer2Size-1; i > 0; i--) {
-			int layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+i];
-			if (layerSum < bitsToFind) {
-				bitsToFind -= layerSum;
-				bitmaskOffset += i;
-				break;
-			}
+		//for (int i = layer2Size-1; i > 0; i--) {
+		//	int layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+i];
+		//	if (layerSum < bitsToFind) {
+		//		bitsToFind -= layerSum;
+		//		bitmaskOffset += i;
+		//		break;
+		//	}
+		//}
+		o = layer2Size / 2;
+		layerSum = 0;
+		for (int i = layer2Size/4; i > 0; i = (i + 1)/2){
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+o];
+			o = (layerSum < bitsToFind) ? o + i : o - i;
 		}
+		if (layerSum >= bitsToFind){
+			o--;
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+o];
+		}
+		bitsToFind -= layerSum;
+		bitmaskOffset += o;
 		bitmaskOffset *= 32;
 
 		// Handle layer 1
 		int layer1Size = (bitmaskSize+31) / 32 - offsetLayer1 * 32;
 		if (layer1Size > 32) layer1Size = 32;
 		int layer1Offset = bitmaskSize*4 + offsetLayer1 * 32; // 4 shorts in one long
-		for (int i = layer1Size-1; i > 0; i--) {
-			int layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+i]);
-			if (layerSum < bitsToFind) {
-				bitmaskOffset += i;
-				bitsToFind -= layerSum;
-				break;
-			}
+		//for (int i = layer1Size-1; i > 0; i--) {
+		//	int layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+i]);
+		//	if (layerSum < bitsToFind) {
+		//		bitmaskOffset += i;
+		//		bitsToFind -= layerSum;
+		//		break;
+		//	}
+		//}
+		o = layer1Size / 2;
+		layerSum = 0;
+		for (int i = layer1Size/4; i > 0; i = (i + 1)/2){
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer1Offset+o];
+			o = (layerSum < bitsToFind) ? o + i : o - i;
 		}
+		if (layerSum >= bitsToFind){
+			o--;
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer1Offset+o];
+		}
+		bitsToFind -= layerSum;
+		bitmaskOffset += o;
 		bitmaskOffset *= 32;
 
 		// Handle virtual layer 0 (before bitmask)
