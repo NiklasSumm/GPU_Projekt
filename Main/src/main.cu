@@ -440,6 +440,9 @@ int main(int argc, char *argv[])
 
 	cudaDeviceSynchronize();
 
+	//Warm-up
+	setupKernel1<<<4, 1024>>>(numElements, d_bitmask);
+
 	ChTimer setup_timer;
 	ChTimer setup1_timer;
 	ChTimer setup2_timer;
