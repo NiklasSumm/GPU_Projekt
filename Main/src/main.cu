@@ -205,14 +205,14 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		//	}
 		//}
 		o = layer1Size / 2;
-		layerSum = reinterpret_cast<unsigned short*>(tree)[layer1Offset+o];
+		layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+o]);
 		for (int i = layer1Size/4; i > 0; i >>= 1){
 			o = (layerSum < bitsToFind) ? o + i : o - i;
-			layerSum = reinterpret_cast<unsigned short*>(tree)[layer1Offset+o];
+			layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+o]);
 		}
 		if (layerSum >= bitsToFind){
 			o--;
-			layerSum = reinterpret_cast<unsigned short*>(tree)[layer1Offset+o];
+			layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+o]);
 		}
 		bitsToFind -= layerSum;
 		bitmaskOffset += o;
