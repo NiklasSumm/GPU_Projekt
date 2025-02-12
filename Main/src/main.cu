@@ -134,10 +134,6 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		offsetLayer3 = o;
 		int bitmaskOffset = offsetLayer3 * 32;
 
-		if (o != idx){
-			printf("%i - %i\n", o, idx);
-		}
-
 		// Handle layer 3
 		int layer3Size = (bitmaskSize+1024*32-1) / (1024*32) - offsetLayer3 * 32;
 		if (layer3Size > 32) layer3Size = 32;
