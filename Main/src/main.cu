@@ -428,30 +428,64 @@ int main(int argc, char *argv[])
 	//
 	long *d_bitmask;
 	cudaMalloc(&d_bitmask, static_cast<size_t>(treeSize));
+
+	ChTimer copy_timer;
+	copy_timer.start();
+
 	cudaMemcpy(d_bitmask, h_bitmask, static_cast<size_t>(numElements * sizeof(*d_bitmask)), cudaMemcpyHostToDevice); // Only copy bitmask
+
+	copy_timer.stop();
+	printf("Time to copy from host to device = %f", copy_timer.getTime());
+
+
 	cudaDeviceSynchronize();
 
+	ChTimer setup_timer;
+	ChTimer setup1_timer;
+	ChTimer setup2_timer;
+	ChTimer setup2_timer;
+
+	setup_timer.start();
+	setup1_timer.start();
 	setupKernel1<<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
+	setup1_timer.stop();
 
 	int offset;
 	if (layerSize(2, numElements) > 0) {
 		printf("running second kernel...\n");
 		offset = layerSize(0, numElements) + layerSize(1, numElements);
 		int size = layerSize(2, numElements);
+		setup2_timer.start();
 		setupKernel2<<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset]);
+		setup2_timer.stop();
 	}
 
 	if (layerSize(4, numElements) > 0) {
 		printf("running third kernel...\n");
 		offset += layerSize(2, numElements) + layerSize(3, numElements);
 		int size = layerSize(4, numElements);
+		setup3_timer.start();
 		setupKernel2<<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset], false, false);
+		setup3_timer.stop();
 	}
+
+	setup_timer.stop();
+
+	printf("Overall setup time = %f", setup_timer.getTime());
+	printf("Setup kernel 1 time = %f", setup1_timer.getTime());
+	printf("Setup kernel 2 time = %f", setup2_timer.getTime());
+	printf("Setup kernel 3 time = %f", setup3_timer.getTime());
 
 	// Synchronize
 	cudaDeviceSynchronize();
 
+	copy_timer.start();
+
 	cudaMemcpy(h_bitmask, d_bitmask, static_cast<size_t>(treeSize), cudaMemcpyDeviceToHost); // Copy full tree back
+
+	copy_timer.stop();
+	printf("Time to copy from device to host = %f", copy_timer.getTime());
+
 	printTree(numElements, h_bitmask);
 
 	// Apply
