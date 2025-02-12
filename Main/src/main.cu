@@ -126,7 +126,7 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 			o = (layerSum < bitsToFind) ? o + i : o - i;
 			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];
 		}
-		if (layerSum >= bitsToFind){
+		if (layerSum >= bitsToFind && o > 0){
 			o--;
 			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];
 		}
@@ -153,7 +153,7 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 			o = (layerSum < bitsToFind) ? o + i : o - i;
 			layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+o];
 		}
-		if (layerSum >= bitsToFind){
+		if (layerSum >= bitsToFind && o > 0){
 			o--;
 			layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+o];
 		}
@@ -180,7 +180,7 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 			o = (layerSum < bitsToFind) ? o + i : o - i;
 			layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+o];
 		}
-		if (layerSum >= bitsToFind){
+		if (layerSum >= bitsToFind && o > 0){
 			o--;
 			layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+o];
 		}
@@ -206,7 +206,7 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 			o = (layerSum < bitsToFind) ? o + i : o - i;
 			layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+o]);
 		}
-		if (layerSum >= bitsToFind){
+		if (layerSum >= bitsToFind && o > 0){
 			o--;
 			layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+o]);
 		}
