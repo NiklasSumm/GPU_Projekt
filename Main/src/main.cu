@@ -441,7 +441,7 @@ int main(int argc, char *argv[])
 	cudaDeviceSynchronize();
 
 	//Warm-up
-	setupKernel1<<<4, 1024>>>(numElements, d_bitmask);
+	setupKernel1<<<1, 1024>>>(numElements, d_bitmask);
 
 	ChTimer setup_timer;
 	ChTimer setup1_timer;
@@ -499,8 +499,14 @@ int main(int argc, char *argv[])
 	int* d_input;
 	cudaMalloc(&d_input, static_cast<size_t>(packedSize*sizeof(int)));
 
+	ChTimer apply_timer;
+	apply_timer.start();
+
 	simpleApply<<<(packedSize+127)/128, 128>>>(packedSize, d_input, numElements, d_bitmask);
 	cudaDeviceSynchronize();
+
+	apply_timer.stop();
+	printf("Apply kernel time = %f ms\n", apply_timer.getTime() * 1e3);
 
 	int* h_input;
 	cudaMallocHost(&h_input, static_cast<size_t>(packedSize*sizeof(int)));
