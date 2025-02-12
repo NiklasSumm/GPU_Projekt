@@ -451,6 +451,7 @@ int main(int argc, char *argv[])
 	setup_timer.start();
 	setup1_timer.start();
 	setupKernel1<<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
+	cudaDeviceSynchronize();
 	setup1_timer.stop();
 
 	int offset;
@@ -460,6 +461,7 @@ int main(int argc, char *argv[])
 		int size = layerSize(2, numElements);
 		setup2_timer.start();
 		setupKernel2<<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset]);
+		cudaDeviceSynchronize();
 		setup2_timer.stop();
 	}
 
@@ -469,11 +471,12 @@ int main(int argc, char *argv[])
 		int size = layerSize(4, numElements);
 		setup3_timer.start();
 		setupKernel2<<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset], false, false);
+		cudaDeviceSynchronize();
 		setup3_timer.stop();
 	}
 
 	// Synchronize
-	cudaDeviceSynchronize();
+	//cudaDeviceSynchronize();
 
 	setup_timer.stop();
 
