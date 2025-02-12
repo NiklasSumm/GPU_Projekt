@@ -472,6 +472,9 @@ int main(int argc, char *argv[])
 		setup3_timer.stop();
 	}
 
+	// Synchronize
+	cudaDeviceSynchronize();
+
 	setup_timer.stop();
 
 	printf("Overall setup time = %f ms\n", setup_timer.getTime() * 1e3);
@@ -479,8 +482,6 @@ int main(int argc, char *argv[])
 	printf("Setup kernel 2 time = %f ms\n", setup2_timer.getTime() * 1e3);
 	printf("Setup kernel 3 time = %f ms\n", setup3_timer.getTime() * 1e3);
 
-	// Synchronize
-	cudaDeviceSynchronize();
 
 	copy_timer.start();
 
