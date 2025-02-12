@@ -443,7 +443,7 @@ int main(int argc, char *argv[])
 	ChTimer setup_timer;
 	ChTimer setup1_timer;
 	ChTimer setup2_timer;
-	ChTimer setup2_timer;
+	ChTimer setup3_timer;
 
 	setup_timer.start();
 	setup1_timer.start();
