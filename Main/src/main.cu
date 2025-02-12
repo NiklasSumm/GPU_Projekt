@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
 	cudaMemcpy(d_bitmask, h_bitmask, static_cast<size_t>(numElements * sizeof(*d_bitmask)), cudaMemcpyHostToDevice); // Only copy bitmask
 
 	copy_timer.stop();
-	printf("Time to copy from host to device = %f", copy_timer.getTime());
+	printf("Time to copy from host to device = %f ms\n", copy_timer.getTime() * 1e3);
 
 
 	cudaDeviceSynchronize();
@@ -471,10 +471,10 @@ int main(int argc, char *argv[])
 
 	setup_timer.stop();
 
-	printf("Overall setup time = %f", setup_timer.getTime());
-	printf("Setup kernel 1 time = %f", setup1_timer.getTime());
-	printf("Setup kernel 2 time = %f", setup2_timer.getTime());
-	printf("Setup kernel 3 time = %f", setup3_timer.getTime());
+	printf("Overall setup time = %f ms\n", setup_timer.getTime() * 1e3);
+	printf("Setup kernel 1 time = %f ms\n", setup1_timer.getTime() * 1e3);
+	printf("Setup kernel 2 time = %f ms\n", setup2_timer.getTime() * 1e3);
+	printf("Setup kernel 3 time = %f ms\n", setup3_timer.getTime() * 1e3);
 
 	// Synchronize
 	cudaDeviceSynchronize();
@@ -484,7 +484,7 @@ int main(int argc, char *argv[])
 	cudaMemcpy(h_bitmask, d_bitmask, static_cast<size_t>(treeSize), cudaMemcpyDeviceToHost); // Copy full tree back
 
 	copy_timer.stop();
-	printf("Time to copy from device to host = %f", copy_timer.getTime());
+	printf("Time to copy from device to host = %f ms\n", copy_timer.getTime() * 1e3);
 
 	printTree(numElements, h_bitmask);
 
