@@ -136,7 +136,7 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		offsetLayer3 = o;
 		int bitmaskOffset = offsetLayer3 * 32;
 
-		if (elementIdx % 512 == 0){
+		if (elementIdx % 1024*1024 == 0){
 			printf("%i - %i\n", o, idx);
 		}
 
