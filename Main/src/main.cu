@@ -38,6 +38,8 @@ setupKernel1(int numElements, long *input)
 	int iterations = (1023 + blockDim.x) / blockDim.x;
 
 	__shared__ unsigned int blockSum;
+	blockSum = 0;
+	__syncthreads();
 
 	for (int i = 0; i < iterations; i++){
 		int elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
@@ -74,7 +76,7 @@ setupKernel1(int numElements, long *input)
 	// Last thread of each full block writes into layer 2
 	if (threadIdx.x == blockDim.x - 1) {
 		int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
-		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = blockSum;
+		reinterpret_cast<unsigned int*>(input)[offset+1023] = blockSum;
 	}
 }
 
