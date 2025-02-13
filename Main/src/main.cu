@@ -139,9 +139,9 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		//		break;
 		//	}
 		//}
-		int o = layer4Size / 2;
+		int o = (layer4Size + 1) / 2;
 		int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];
-		int i = layer4Size/4;
+		int i = (layer4Size + 3) / 4;
 		while(i > 1){
 			i = (i + 1) / 2;
 		//for (int i = layer4Size/4; i > 0; i >>= 1){
@@ -171,9 +171,9 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		//		break;
 		//	}
 		//}
-		o = layer3Size / 2;
+		o = (layer3Size + 1) / 2;
 		layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+o];;
-		i = layer3Size/4;
+		i = (layer3Size + 3) / 4;
 		while(i > 1){
 			i = (i + 1) / 2;
 		//for (int i = layer3Size/4; i > 0; i >>= 1){
@@ -203,9 +203,9 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		//		break;
 		//	}
 		//}
-		o = layer2Size / 2;
+		o = (layer2Size + 1) / 2;
 		layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+o];
-		i = layer2Size/4;
+		i = (layer2Size + 3) / 4;
 		while(i > 1){
 			i = (i + 1) / 2;
 		//for (int i = layer2Size/4; i > 0; i >>= 1){
@@ -234,9 +234,9 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		//		break;
 		//	}
 		//}
-		o = layer1Size / 2;
+		o = (layer1Size + 1) / 2;
 		layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+o]);
-		i = layer1Size/4;
+		i = (layer1Size + 3) / 4;
 		while(i > 1){
 			i = (i + 1) / 2;
 		//for (int i = layer1Size/4; i > 0; i >>= 1){
