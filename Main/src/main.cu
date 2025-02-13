@@ -37,7 +37,7 @@ setupKernel1(int numElements, long *input)
 {
 	int iterations = (1023 + blockDim.x) / blockDim.x;
 
-	__shared__ unsigned int blockSum = 0;
+	__shared__ unsigned int blockSum;
 
 	for (int i = 0; i < iterations; i++){
 		int elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
