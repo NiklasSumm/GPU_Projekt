@@ -64,7 +64,7 @@ setupKernel1(int numElements, long *input)
 			//	reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
 			//}
 			__syncthreads();
-			if (threadIdx.x == blockDim.x - 1 || elementId = numElements - 1) {
+			if ((threadIdx.x == blockDim.x - 1) || (elementId = numElements - 1)) {
 				blockSum += thread_data + original_data;
 			}
 			__syncthreads();
