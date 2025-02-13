@@ -167,7 +167,7 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		//}
 		int o = (layer4Size) / 2;
 		int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];
-		i = (layer4Size + 1) / 2;
+		int i = (layer4Size + 1) / 2;
 		while(i > 1){
 			i = (i + 1) / 2;
 		//for (int i = layer4Size/4; i > 0; i >>= 1){
