@@ -35,49 +35,75 @@ template <int blockSize>
 __global__ void
 setupKernel1(int numElements, long *input)
 {
-	int iterations = (1023 + blockDim.x) / blockDim.x;
+	//int iterations = (1023 + blockDim.x) / blockDim.x;
+//
+	//__shared__ unsigned int blockSum;
+	//blockSum = 0;
+	//__syncthreads();
+//
+	//for (int i = 0; i < iterations; i++){
+	//	int elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
+//
+	//	if (elementId < numElements) {
+	//		using BlockScan = cub::BlockScan<unsigned int, blockSize>;
+	//		__shared__ typename BlockScan::TempStorage temp_storage;
+//
+	//		// Load 64 bit bitmask section and count bits
+	//		unsigned int original_data = __popcll(input[elementId]);
+	//		unsigned int thread_data;
+//
+	//		// Collectively compute the block-wide exclusive sum
+	//		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data);
+//
+	//		// First thread of each warp writes in layer 1
+	//		if ((threadIdx.x & 31) == 0) {
+	//			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data + blockSum);
+	//		}
+//
+	//		// Last thread of each full block writes into layer 2
+	//		//if (threadIdx.x == blockDim.x - 1) {
+	//		//	int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
+	//		//	reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
+	//		//}
+	//		__syncthreads();
+	//		if ((threadIdx.x == blockDim.x - 1) || (elementId = numElements - 1)) {
+	//			blockSum += thread_data + original_data;
+	//		}
+	//		__syncthreads();
+	//	}
+	//}
+//
+	//// Last thread of each full block writes into layer 2
+	//if (threadIdx.x == blockDim.x - 1) {
+	//	int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
+	//	reinterpret_cast<unsigned int*>(input)[offset+1023] = blockSum;
+	//}
 
-	__shared__ unsigned int blockSum;
-	blockSum = 0;
-	__syncthreads();
+	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
 
-	for (int i = 0; i < iterations; i++){
-		int elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
+	if (elementId < numElements) {
+		using BlockScan = cub::BlockScan<unsigned int, 1024>;
+		__shared__ typename BlockScan::TempStorage temp_storage;
 
-		if (elementId < numElements) {
-			using BlockScan = cub::BlockScan<unsigned int, blockSize>;
-			__shared__ typename BlockScan::TempStorage temp_storage;
+		// Load 64 bit bitmask section and count bits
+		unsigned int original_data = __popcll(input[elementId]);
+		unsigned int thread_data;
 
-			// Load 64 bit bitmask section and count bits
-			unsigned int original_data = __popcll(input[elementId]);
-			unsigned int thread_data;
+		// Collectively compute the block-wide exclusive sum
+		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data);
 
-			// Collectively compute the block-wide exclusive sum
-			BlockScan(temp_storage).ExclusiveSum(original_data, thread_data);
+		// First thread of each warp writes in layer 1
+		if ((threadIdx.x & 31) == 0) {
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data);
+		}
 
-			// First thread of each warp writes in layer 1
-			if ((threadIdx.x & 31) == 0) {
-				reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data + blockSum);
-			}
-
-			// Last thread of each full block writes into layer 2
-			//if (threadIdx.x == blockDim.x - 1) {
-			//	int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
-			//	reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
-			//}
-			__syncthreads();
-			if ((threadIdx.x == blockDim.x - 1) || (elementId = numElements - 1)) {
-				blockSum += thread_data + original_data;
-			}
-			__syncthreads();
+		// Last thread of each full block writes into layer 2
+		if (threadIdx.x == 1023) {
+			int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
+			reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
 		}
 	}
 
-	// Last thread of each full block writes into layer 2
-	if (threadIdx.x == blockDim.x - 1) {
-		int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
-		reinterpret_cast<unsigned int*>(input)[offset+1023] = blockSum;
-	}
 }
 
 __global__ void
