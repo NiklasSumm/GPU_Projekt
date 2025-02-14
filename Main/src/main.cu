@@ -73,6 +73,8 @@ setupKernel1(int numElements, long *input)
 		}
 	}
 
+	__syncthreads();
+
 	// Last thread of each full block writes into layer 2
 	if (threadIdx.x == blockDim.x - 1) {
 		int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
@@ -157,31 +159,23 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		int layer4Size = (bitmaskSize+1024*1024-1) / (1024*1024);
 		int layer4Offset = bitmaskSize*2 + ((bitmaskSize+31)/32 + 1)/2 + (bitmaskSize+1023) / 1024 + (bitmaskSize+1024*32-1) / (1024*32);
 		int offsetLayer3 = 0; // Offset inside layer 3 due to layer 4 selection
-		//for (int i = layer4Size-1; i > 0; i--) {
-		//	int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+i];
-		//	if (layerSum < bitsToFind) {
-		//		bitsToFind -= layerSum;
-		//		offsetLayer3 = i;
-		//		break;
-		//	}
-		//}
-		int o = (layer4Size) / 2;
-		int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];
-		int i = (layer4Size + 1) / 2;
-		while(i > 1){
-			i = (i + 1) / 2;
-		//for (int i = layer4Size/4; i > 0; i >>= 1){
-			o = (layerSum < bitsToFind) ? o + i : o - i;
-			o = (o > 0) ? ((o < layer4Size) ? o : layer4Size - 1) : 0;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];
+
+		int search_pos = (layer4Size) / 2;
+		int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+search_pos];
+		int step = (layer4Size + 1) / 2;
+		while(step > 1){
+			step = (step + 1) / 2;
+			search_pos = (layerSum < bitsToFind) ? search_pos + step : search_pos - step;
+			search_pos = (search_pos > 0) ? ((search_pos < layer4Size) ? search_pos : layer4Size - 1) : 0;
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+search_pos];
 		}
-		if (layerSum >= bitsToFind && o > 1){
-			o--;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+o];
+		if (layerSum >= bitsToFind && search_pos > 0){
+			search_pos--;
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+search_pos];
 		}
-		if (layerSum < bitsToFind && o > 0) {
+		if (layerSum < bitsToFind) {
 			bitsToFind -= layerSum;
-			offsetLayer3 = o;
+			offsetLayer3 = search_pos;
 		}
 		int bitmaskOffset = offsetLayer3 * 32;
 
@@ -190,31 +184,23 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		if (layer3Size > 32) layer3Size = 32;
 		int layer3Offset = bitmaskSize*2 + ((bitmaskSize+31)/32 + 1)/2 + (bitmaskSize+1023) / 1024 + offsetLayer3 * 32;
 		int offsetLayer2 = 0; // Offset inside layer 2 due to layer 3 selection
-		//for (int i = layer3Size-1; i > 0; i--) {
-		//	int layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+i];
-		//	if (layerSum < bitsToFind) {
-		//		bitsToFind -= layerSum;
-		//		bitmaskOffset += i;
-		//		break;
-		//	}
-		//}
-		o = (layer3Size) / 2;
-		layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+o];;
-		i = (layer3Size + 1) / 2;
-		while(i > 1){
-			i = (i + 1) / 2;
-		//for (int i = layer3Size/4; i > 0; i >>= 1){
-			o = (layerSum < bitsToFind) ? o + i : o - i;
-			o = (o > 0) ? ((o < layer3Size) ? o : layer3Size - 1) : 0;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+o];
+
+		search_pos = (layer3Size) / 2;
+		layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+search_pos];;
+		step = (layer3Size + 1) / 2;
+		while(step > 1){
+			step = (step + 1) / 2;
+			search_pos = (layerSum < bitsToFind) ? search_pos + step : search_pos - step;
+			search_pos = (search_pos > 0) ? ((search_pos < layer3Size) ? search_pos : layer3Size - 1) : 0;
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+search_pos];
 		}
-		if (layerSum >= bitsToFind && o > 1){
-			o--;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+o];
+		if (layerSum >= bitsToFind && search_pos > 0){
+			search_pos--;
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+search_pos];
 		}
-		if (layerSum < bitsToFind && o > 0) {
+		if (layerSum < bitsToFind) {
 			bitsToFind -= layerSum;
-			bitmaskOffset += o;
+			bitmaskOffset += search_pos;
 		}
 		bitmaskOffset *= 32;
 
@@ -223,31 +209,23 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		if (layer2Size > 32) layer2Size = 32;
 		int layer2Offset = bitmaskSize*2 + ((bitmaskSize+31)/32 + 1)/2 + offsetLayer2 * 32;
 		int offsetLayer1 = 0; // Offset inside layer 1 due to layer 2 selection
-		//for (int i = layer2Size-1; i > 0; i--) {
-		//	int layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+i];
-		//	if (layerSum < bitsToFind) {
-		//		bitsToFind -= layerSum;
-		//		bitmaskOffset += i;
-		//		break;
-		//	}
-		//}
-		o = (layer2Size) / 2;
-		layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+o];
-		i = (layer2Size + 1) / 2;
-		while(i > 1){
-			i = (i + 1) / 2;
-		//for (int i = layer2Size/4; i > 0; i >>= 1){
-			o = (layerSum < bitsToFind) ? o + i : o - i;
-			o = (o > 0) ? ((o < layer2Size) ? o : layer2Size - 1) : 0;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+o];
+
+		search_pos = (layer2Size) / 2;
+		layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+search_pos];
+		step = (layer2Size + 1) / 2;
+		while(step > 1){
+			step = (step + 1) / 2;
+			search_pos = (layerSum < bitsToFind) ? search_pos + step : search_pos - step;
+			search_pos = (search_pos > 0) ? ((search_pos < layer2Size) ? search_pos : layer2Size - 1) : 0;
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+search_pos];
 		}
-		if (layerSum >= bitsToFind && o > 1){
-			o--;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+o];
+		if (layerSum >= bitsToFind && search_pos > 0){
+			search_pos--;
+			layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+search_pos];
 		}
-		if (layerSum < bitsToFind && o > 0) {
+		if (layerSum < bitsToFind) {
 			bitsToFind -= layerSum;
-			bitmaskOffset += o;
+			bitmaskOffset += search_pos;
 		}
 		bitmaskOffset *= 32;
 
@@ -255,31 +233,23 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		int layer1Size = (bitmaskSize+31) / 32 - offsetLayer1 * 32;
 		if (layer1Size > 32) layer1Size = 32;
 		int layer1Offset = bitmaskSize*4 + offsetLayer1 * 32; // 4 shorts in one long
-		//for (int i = layer1Size-1; i > 0; i--) {
-		//	int layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+i]);
-		//	if (layerSum < bitsToFind) {
-		//		bitmaskOffset += i;
-		//		bitsToFind -= layerSum;
-		//		break;
-		//	}
-		//}
-		o = (layer1Size) / 2;
-		layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+o]);
-		i = (layer1Size + 1) / 2;
-		while(i > 1){
-			i = (i + 1) / 2;
-		//for (int i = layer1Size/4; i > 0; i >>= 1){
-			o = (layerSum < bitsToFind) ? o + i : o - i;
-			o = (o > 0) ? ((o < layer1Size) ? o : layer1Size - 1) : 0;
-			layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+o]);
+
+		search_pos = (layer1Size) / 2;
+		layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+search_pos]);
+		step = (layer1Size + 1) / 2;
+		while(step > 1){
+			step = (step + 1) / 2;
+			search_pos = (layerSum < bitsToFind) ? search_pos + step : search_pos - step;
+			search_pos = (search_pos > 0) ? ((search_pos < layer1Size) ? search_pos : layer1Size - 1) : 0;
+			layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+search_pos]);
 		}
-		if (layerSum >= bitsToFind && o > 1){
-			o--;
-			layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+o]);
+		if (layerSum >= bitsToFind && search_pos > 0){
+			search_pos--;
+			layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+search_pos]);
 		}
-		if (layerSum < bitsToFind && o > 0) {
+		if (layerSum < bitsToFind) {
 			bitsToFind -= layerSum;
-			bitmaskOffset += o;
+			bitmaskOffset += search_pos;
 		}
 		bitmaskOffset *= 32;
 
