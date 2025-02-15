@@ -185,7 +185,7 @@ setupKernel88(int numElements, long *input)
 
 	unsigned int elementId = 0;
 
-	if (elementId < numElements) {
+	for (int i = 0; i < iterations; i++) {
 		elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
 
 		// Load 64 bit bitmask section and count bits
@@ -207,7 +207,7 @@ setupKernel88(int numElements, long *input)
 	}
 
 	// Last thread of each full block writes into layer 2
-	if ((threadIdx.x == blockDim - 1) && (elementId < numElements)) {
+	if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
 		int offset = numElements*2 + ((numElements+3)/4 + 1)/2;
 		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
 	}
