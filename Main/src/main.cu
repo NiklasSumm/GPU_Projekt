@@ -36,7 +36,7 @@ void printTree115(int, long*);
 void printTree78(int, long*);
 void printTree88(int, long*);
 
-
+template <int blockSize>
 __global__ void
 setupKernel1(int numElements, long *input)
 {
@@ -45,7 +45,7 @@ setupKernel1(int numElements, long *input)
 	unsigned int blockSum = 0;
 	unsigned int aggregate = 0;
 
-	using BlockScan = cub::BlockScan<unsigned int, 1024>;
+	using BlockScan = cub::BlockScan<unsigned int, blockSize>;
 	__shared__ typename BlockScan::TempStorage temp_storage;
 
 	for (int i = 0; i < iterations; i++) {
@@ -445,7 +445,7 @@ int layerSize(int layer, int bitmaskSize) {
 }
 
 void setup115(int numElements, long *d_bitmask) {
-	setupKernel1<<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
+	setupKernel1<256><<<(numElements+1023)/1024, 256>>>(numElements, d_bitmask);
 
 	int offset;
 	if (layerSize(2, numElements) > 0) {
