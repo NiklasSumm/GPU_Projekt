@@ -73,7 +73,7 @@ setupKernel1(int numElements, long *input)
 		if (threadIdx.x == blockDim.x - 1) {
 			int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
 			reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = blockSum;
-			//printf("%i\n", blockSum);
+			printf("%i\n", blockSum);
 		}
 	}
 }
