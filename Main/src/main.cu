@@ -119,6 +119,7 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 			input[numElements+(elementId/32)] = thread_data + aggregateSum;
 		}
 
+		// Accumulate the aggregate for the next iteration of the loop 
 		aggregateSum += aggregate;
 	}
 
@@ -458,21 +459,21 @@ int layerSize(int layer, int bitmaskSize) {
 }
 
 void setup115(int numElements, long *d_bitmask) {
-	setupKernel1<256><<<(numElements+1023)/1024, 256>>>(numElements, d_bitmask);
+	setupKernel1<1024><<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
 
 	int offset;
 	if (layerSize(2, numElements) > 0) {
 		printf("running second kernel...\n");
 		offset = layerSize(0, numElements) + layerSize(1, numElements);
 		int size = layerSize(2, numElements);
-		setupKernel2<256><<<(size+1023)/1024, 256>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset]);
+		setupKernel2<1024><<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset]);
 	}
 
 	if (layerSize(4, numElements) > 0) {
 		printf("running third kernel...\n");
 		offset += layerSize(2, numElements) + layerSize(3, numElements);
 		int size = layerSize(4, numElements);
-		setupKernel2<256><<<(size+1023)/1024, 256>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset], false, false);
+		setupKernel2<1024><<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset], false, false);
 	}
 }
 
