@@ -122,7 +122,7 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 	// Last thread of each full block writes into next but one layer. These values need to be corrected.
 	if (nextButOne && threadIdx.x == blockDim.x - 1) {
 		int offset = numElements + (numElements+31)/32;
-		input[offset+blockIdx.x] = aggregate_sum;
+		input[offset+blockIdx.x] = aggregateSum;
 	}
 }
 
