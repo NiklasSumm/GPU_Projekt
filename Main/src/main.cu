@@ -109,7 +109,8 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 		correction = __shfl_sync(0xffffffff, correction, 0);
 
 		// Every thread needs to rewrite own value, to correct current layer
-		input[elementId] = thread_data - correction;
+		if (elementId < numElements)
+			input[elementId] = thread_data - correction;
 
 		// First thread of each warp writes in next layer. These values are already fully correct.
 		if (next && ((threadIdx.x & 31)) == 0 && (elementId < numElements)) {
