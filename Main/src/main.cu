@@ -62,7 +62,7 @@ setupKernel1(int numElements, long *input)
 		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
 
 		// First thread of each warp writes in layer 1
-		if ((threadIdx.x & 31) == 0) {
+		if (((threadIdx.x & 31) == 0) && (elementId < numElements)) {
 			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data + aggregateSum);
 		}
 
