@@ -149,6 +149,7 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 	if (nextButOne && threadIdx.x == blockDim.x - 1) {
 		int offset = numElements + (numElements+31)/32;
 		input[offset+blockIdx.x] = aggregateSum;
+		printf("%i - %i\n", offset+blockIdx.x, aggregateSum);
 	}
 }
 
