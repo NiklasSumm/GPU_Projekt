@@ -48,8 +48,9 @@ setupKernel1(int numElements, long *input)
 	using BlockScan = cub::BlockScan<unsigned int, blockSize>;
 	__shared__ typename BlockScan::TempStorage temp_storage;
 
+	unsigned int elementId = 0;
 	for (int i = 0; i < iterations; i++) {
-		unsigned int elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
+		elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
 
 		// Load 64 bit bitmask section and count bits
 		unsigned int original_data = 0;
@@ -71,7 +72,7 @@ setupKernel1(int numElements, long *input)
 	}
 
 	// Last thread of each full block writes into layer 2
-	if (threadIdx.x == blockDim.x - 1) {
+	if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
 		int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
 		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
 	}
@@ -89,8 +90,9 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 	using BlockScan = cub::BlockScan<unsigned int, blockSize>;
 	__shared__ typename BlockScan::TempStorage temp_storage;
 
+	unsigned int elementId = 0;
 	for (int i = 0; i < iterations; i++) {
-		unsigned int elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
+		elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
 
 		// Load prepared values from previous kernel
 		unsigned int original_data = 0;
@@ -121,7 +123,7 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 	}
 
 	// Last thread of each full block writes into next but one layer. These values need to be corrected.
-	if (nextButOne && (threadIdx.x == blockDim.x - 1)) {
+	if (nextButOne && (threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
 		int offset = numElements + (numElements+31)/32;
 		input[offset+blockIdx.x] = aggregateSum;
 	}
