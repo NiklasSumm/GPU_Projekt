@@ -23,85 +23,56 @@
 #include <cuda/functional>
 #include <bits/stl_numeric.h>
 
+#include <thrust/scan.h>
+#include <thrust/execution_policy.h>
+
 const static int DEFAULT_NUM_ELEMENTS = 10;
 
 //
 // Function Prototypes
 //
 void printHelp(char *);
-void printTree(int, long*);
+void printTree115(int, long*);
+void printTree78(int, long*);
+void printTree88(int, long*);
 
-template <int blockSize>
+
 __global__ void
 setupKernel1(int numElements, long *input)
 {
 	int iterations = (1023 + blockDim.x) / blockDim.x;
 
-	__shared__ unsigned int blockSum;
-	blockSum = 0;
-	__syncthreads();
+	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
 
-	for (int i = 0; i < iterations; i++){
-		int elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
+	unsigned int initial_value = 0;
+	unsigned int aggregate = 0;
 
-		//if (elementId < numElements) {
-		using BlockScan = cub::BlockScan<unsigned int, blockSize>;
+	for (int i = 0; i < iterations; i++) {
+		using BlockScan = cub::BlockScan<unsigned int, 1024>;
 		__shared__ typename BlockScan::TempStorage temp_storage;
 
 		// Load 64 bit bitmask section and count bits
 		unsigned int original_data = 0;
-		if (elementId < numElements) original_data = __popcll(input[elementId]);
+		if (elementId < numElements) {
+			__popcll(input[elementId]);
+		}
 		unsigned int thread_data;
 
 		// Collectively compute the block-wide exclusive sum
-		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data);
+		BlockScan(temp_storage).ExclusiveScan(original_data, thread_data, initial_value, cuda::sum<>{}, aggregate);
+		initial_value = aggregate;
 
 		// First thread of each warp writes in layer 1
-		if (((threadIdx.x & 31) == 0) && (elementId < numElements)) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data + blockSum);
+		if ((threadIdx.x & 31) == 0) {
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data);
 		}
 
-		__syncthreads();
-		if (((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) || (elementId == numElements - 1)) {
-			blockSum += thread_data + original_data;
+		// Last thread of each full block writes into layer 2
+		if (threadIdx.x == blockDim.x - 1) {
+			int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
+			reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
 		}
-		__syncthreads();
-		//}
 	}
-
-	__syncthreads();
-
-	// Last thread of each full block writes into layer 2
-	if (threadIdx.x == blockDim.x - 1) {
-		int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
-		reinterpret_cast<unsigned int*>(input)[offset+1023] = blockSum;
-	}
-
-	//int elementId = blockIdx.x * blockDim.x + threadIdx.x;
-//
-	//if (elementId < numElements) {
-	//	using BlockScan = cub::BlockScan<unsigned int, 1024>;
-	//	__shared__ typename BlockScan::TempStorage temp_storage;
-//
-	//	// Load 64 bit bitmask section and count bits
-	//	unsigned int original_data = __popcll(input[elementId]);
-	//	unsigned int thread_data;
-//
-	//	// Collectively compute the block-wide exclusive sum
-	//	BlockScan(temp_storage).ExclusiveSum(original_data, thread_data);
-//
-	//	// First thread of each warp writes in layer 1
-	//	if ((threadIdx.x & 31) == 0) {
-	//		reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data);
-	//	}
-//
-	//	// Last thread of each full block writes into layer 2
-	//	if (threadIdx.x == 1023) {
-	//		int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
-	//		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
-	//	}
-	//}
-
 }
 
 __global__ void
@@ -144,6 +115,64 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 
 
 __global__ void
+setupKernel78(int numElements, long *input)
+{
+	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (elementId < numElements) {
+		using BlockScan = cub::BlockScan<unsigned int, 512>;
+		__shared__ typename BlockScan::TempStorage temp_storage;
+
+		// Load 64 bit bitmask section and count bits
+		unsigned int thread_data = __popcll(input[elementId]);
+
+		// Collectively compute the block-wide inclusive sum
+		BlockScan(temp_storage).InclusiveSum(thread_data, thread_data);
+
+		// Every second thread writes value in first layer
+		if ((threadIdx.x+1 & 1) == 0) {
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/2] = static_cast<unsigned short>(thread_data);
+		}
+
+		// Last thread of each full block writes into layer 2
+		if (threadIdx.x == 511) {
+			int offset = numElements*2 + ((numElements+1)/2 + 1)/2;
+			reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data;
+		}
+	}
+}
+
+__global__ void
+setupKernel88(int numElements, long *input)
+{
+	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (elementId < numElements) {
+		using BlockScan = cub::BlockScan<unsigned int, 1024>;
+		__shared__ typename BlockScan::TempStorage temp_storage;
+
+		// Load 64 bit bitmask section and count bits
+		unsigned int original_data = __popcll(input[elementId]);
+		unsigned int thread_data;
+
+		// Collectively compute the block-wide inclusive sum
+		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data);
+
+		// Every fourth thread writes value in first layer
+		if ((threadIdx.x & 3) == 0) {
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/4] = static_cast<unsigned short>(thread_data);
+		}
+
+		// Last thread of each full block writes into layer 2
+		if (threadIdx.x == 1023) {
+			int offset = numElements*2 + ((numElements+3)/4 + 1)/2;
+			reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
+		}
+	}
+}
+
+
+__global__ void
 simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 {
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -155,23 +184,13 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		int layer4Size = (bitmaskSize+1024*1024-1) / (1024*1024);
 		int layer4Offset = bitmaskSize*2 + ((bitmaskSize+31)/32 + 1)/2 + (bitmaskSize+1023) / 1024 + (bitmaskSize+1024*32-1) / (1024*32);
 		int offsetLayer3 = 0; // Offset inside layer 3 due to layer 4 selection
-
-		int search_pos = (layer4Size) / 2;
-		int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+search_pos];
-		int step = (layer4Size + 1) / 2;
-		while(step > 1){
-			step = (step + 1) / 2;
-			search_pos = (layerSum < bitsToFind) ? search_pos + step : search_pos - step;
-			search_pos = (search_pos > 0) ? ((search_pos < layer4Size) ? search_pos : layer4Size - 1) : 0;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+search_pos];
-		}
-		if (layerSum >= bitsToFind && search_pos > 0){
-			search_pos--;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+search_pos];
-		}
-		if (layerSum < bitsToFind) {
-			bitsToFind -= layerSum;
-			offsetLayer3 = search_pos;
+		for (int i = layer4Size-1; i > 0; i--) {
+			int layerSum = reinterpret_cast<unsigned int*>(tree)[layer4Offset+i];
+			if (layerSum < bitsToFind) {
+				bitsToFind -= layerSum;
+				offsetLayer3 = i;
+				break;
+			}
 		}
 		int bitmaskOffset = offsetLayer3 * 32;
 
@@ -180,23 +199,13 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		if (layer3Size > 32) layer3Size = 32;
 		int layer3Offset = bitmaskSize*2 + ((bitmaskSize+31)/32 + 1)/2 + (bitmaskSize+1023) / 1024 + offsetLayer3 * 32;
 		int offsetLayer2 = 0; // Offset inside layer 2 due to layer 3 selection
-
-		search_pos = (layer3Size) / 2;
-		layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+search_pos];;
-		step = (layer3Size + 1) / 2;
-		while(step > 1){
-			step = (step + 1) / 2;
-			search_pos = (layerSum < bitsToFind) ? search_pos + step : search_pos - step;
-			search_pos = (search_pos > 0) ? ((search_pos < layer3Size) ? search_pos : layer3Size - 1) : 0;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+search_pos];
-		}
-		if (layerSum >= bitsToFind && search_pos > 0){
-			search_pos--;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+search_pos];
-		}
-		if (layerSum < bitsToFind) {
-			bitsToFind -= layerSum;
-			bitmaskOffset += search_pos;
+		for (int i = layer3Size-1; i > 0; i--) {
+			int layerSum = reinterpret_cast<unsigned int*>(tree)[layer3Offset+i];
+			if (layerSum < bitsToFind) {
+				bitsToFind -= layerSum;
+				bitmaskOffset += i;
+				break;
+			}
 		}
 		bitmaskOffset *= 32;
 
@@ -205,23 +214,13 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		if (layer2Size > 32) layer2Size = 32;
 		int layer2Offset = bitmaskSize*2 + ((bitmaskSize+31)/32 + 1)/2 + offsetLayer2 * 32;
 		int offsetLayer1 = 0; // Offset inside layer 1 due to layer 2 selection
-
-		search_pos = (layer2Size) / 2;
-		layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+search_pos];
-		step = (layer2Size + 1) / 2;
-		while(step > 1){
-			step = (step + 1) / 2;
-			search_pos = (layerSum < bitsToFind) ? search_pos + step : search_pos - step;
-			search_pos = (search_pos > 0) ? ((search_pos < layer2Size) ? search_pos : layer2Size - 1) : 0;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+search_pos];
-		}
-		if (layerSum >= bitsToFind && search_pos > 0){
-			search_pos--;
-			layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+search_pos];
-		}
-		if (layerSum < bitsToFind) {
-			bitsToFind -= layerSum;
-			bitmaskOffset += search_pos;
+		for (int i = layer2Size-1; i > 0; i--) {
+			int layerSum = reinterpret_cast<unsigned int*>(tree)[layer2Offset+i];
+			if (layerSum < bitsToFind) {
+				bitsToFind -= layerSum;
+				bitmaskOffset += i;
+				break;
+			}
 		}
 		bitmaskOffset *= 32;
 
@@ -229,28 +228,18 @@ simpleApply(int numPacked, int *permutation, int bitmaskSize, long *tree)
 		int layer1Size = (bitmaskSize+31) / 32 - offsetLayer1 * 32;
 		if (layer1Size > 32) layer1Size = 32;
 		int layer1Offset = bitmaskSize*4 + offsetLayer1 * 32; // 4 shorts in one long
-
-		search_pos = (layer1Size) / 2;
-		layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+search_pos]);
-		step = (layer1Size + 1) / 2;
-		while(step > 1){
-			step = (step + 1) / 2;
-			search_pos = (layerSum < bitsToFind) ? search_pos + step : search_pos - step;
-			search_pos = (search_pos > 0) ? ((search_pos < layer1Size) ? search_pos : layer1Size - 1) : 0;
-			layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+search_pos]);
-		}
-		if (layerSum >= bitsToFind && search_pos > 0){
-			search_pos--;
-			layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+search_pos]);
-		}
-		if (layerSum < bitsToFind) {
-			bitsToFind -= layerSum;
-			bitmaskOffset += search_pos;
+		for (int i = layer1Size-1; i > 0; i--) {
+			int layerSum = static_cast<int>(reinterpret_cast<unsigned short*>(tree)[layer1Offset+i]);
+			if (layerSum < bitsToFind) {
+				bitmaskOffset += i;
+				bitsToFind -= layerSum;
+				break;
+			}
 		}
 		bitmaskOffset *= 32;
 
 		// Handle virtual layer 0 (before bitmask)
-		layerSum = 0;
+		int layerSum;
 		long bitmaskSection;
 		int vLayerOffset = 0;
 		for (; vLayerOffset < 32; vLayerOffset++) {
@@ -452,6 +441,63 @@ int layerSize(int layer, int bitmaskSize) {
 	return size;
 }
 
+void setup115(int numElements, long *d_bitmask) {
+	setupKernel1<<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
+
+	int offset;
+	if (layerSize(2, numElements) > 0) {
+		printf("running second kernel...\n");
+		offset = layerSize(0, numElements) + layerSize(1, numElements);
+		int size = layerSize(2, numElements);
+		setupKernel2<<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset]);
+	}
+
+	if (layerSize(4, numElements) > 0) {
+		printf("running third kernel...\n");
+		offset += layerSize(2, numElements) + layerSize(3, numElements);
+		int size = layerSize(4, numElements);
+		setupKernel2<<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset], false, false);
+	}
+}
+
+void setup78(int numElements, long *d_bitmask) {
+	setupKernel78<<<(numElements+511)/512, 512>>>(numElements, d_bitmask);
+
+	int offset = numElements*2 + ((numElements+1)/2 + 1)/2;
+	int size = (numElements+511)/512;
+	unsigned int *startPtr = &reinterpret_cast<unsigned int*>(d_bitmask)[offset];
+
+	// Determine temporary device storage requirements
+	void *d_temp_storage = nullptr;
+	size_t temp_storage_bytes = 0;
+	cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
+
+	// Allocate temporary storage
+	cudaMalloc(&d_temp_storage, temp_storage_bytes);
+
+	// Run exclusive prefix sum
+	cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
+}
+
+void setup88(int numElements, long *d_bitmask) {
+	setupKernel88<<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
+
+	int offset = numElements*2 + ((numElements+3)/4 + 1)/2;
+	int size = (numElements+1023)/1024;
+	unsigned int *startPtr = &reinterpret_cast<unsigned int*>(d_bitmask)[offset];
+
+	// Determine temporary device storage requirements
+	void *d_temp_storage = nullptr;
+	size_t temp_storage_bytes = 0;
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
+
+	// Allocate temporary storage
+	cudaMalloc(&d_temp_storage, temp_storage_bytes);
+
+	// Run exclusive prefix sum
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
+}
+
 
 //
 // Main
@@ -491,6 +537,8 @@ int main(int argc, char *argv[])
 	treeSize *= sizeof(int);
 	printf("treeSize: %d Bytes\n", treeSize);
 
+	treeSize = numElements * sizeof(long) * 2; // TODO: Replace with correct calculation
+
 	long *h_bitmask;
 	cudaMallocHost(&h_bitmask, static_cast<size_t>(treeSize));
 	
@@ -511,85 +559,51 @@ int main(int argc, char *argv[])
 	//
 	long *d_bitmask;
 	cudaMalloc(&d_bitmask, static_cast<size_t>(treeSize));
-
-	ChTimer copy_timer;
-	copy_timer.start();
-
 	cudaMemcpy(d_bitmask, h_bitmask, static_cast<size_t>(numElements * sizeof(*d_bitmask)), cudaMemcpyHostToDevice); // Only copy bitmask
-
-	copy_timer.stop();
-	printf("Time to copy from host to device = %f ms\n", copy_timer.getTime() * 1e3);
-
-
 	cudaDeviceSynchronize();
 
-	//Warm-up
-	setupKernel1<1024><<<1, 1024>>>(numElements, d_bitmask);
 
-	ChTimer setup_timer;
-	ChTimer setup1_timer;
-	ChTimer setup2_timer;
-	ChTimer setup3_timer;
-
-	setup_timer.start();
-	setup1_timer.start();
-	setupKernel1<1024><<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
-	cudaDeviceSynchronize();
-	setup1_timer.stop();
-
-	int offset;
-	if (layerSize(2, numElements) > 0) {
-		printf("running second kernel...\n");
-		offset = layerSize(0, numElements) + layerSize(1, numElements);
-		int size = layerSize(2, numElements);
-		setup2_timer.start();
-		setupKernel2<<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset]);
-		cudaDeviceSynchronize();
-		setup2_timer.stop();
+	if (chCommandLineGetBool("115", argc, argv)) {
+		setup115(numElements, d_bitmask);
+	} else if (chCommandLineGetBool("78", argc, argv)) {
+		setup78(numElements, d_bitmask);
+	} else if (chCommandLineGetBool("88", argc, argv)) {
+		setup88(numElements, d_bitmask);
 	}
-
-	if (layerSize(4, numElements) > 0) {
-		printf("running third kernel...\n");
-		offset += layerSize(2, numElements) + layerSize(3, numElements);
-		int size = layerSize(4, numElements);
-		setup3_timer.start();
-		setupKernel2<<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset], false, false);
-		cudaDeviceSynchronize();
-		setup3_timer.stop();
-	}
+	
 
 	// Synchronize
-	//cudaDeviceSynchronize();
-
-	setup_timer.stop();
-
-	printf("Overall setup time = %f ms\n", setup_timer.getTime() * 1e3);
-	printf("Setup kernel 1 time = %f ms\n", setup1_timer.getTime() * 1e3);
-	printf("Setup kernel 2 time = %f ms\n", setup2_timer.getTime() * 1e3);
-	printf("Setup kernel 3 time = %f ms\n", setup3_timer.getTime() * 1e3);
-
-
-	copy_timer.start();
+	cudaDeviceSynchronize();
 
 	cudaMemcpy(h_bitmask, d_bitmask, static_cast<size_t>(treeSize), cudaMemcpyDeviceToHost); // Copy full tree back
 
-	copy_timer.stop();
-	printf("Time to copy from device to host = %f ms\n", copy_timer.getTime() * 1e3);
+	if (chCommandLineGetBool("115", argc, argv)) {
+		printTree115(numElements, h_bitmask);
+	} else if (chCommandLineGetBool("78", argc, argv)) {
+		printTree78(numElements, h_bitmask);
+	} else if (chCommandLineGetBool("88", argc, argv)) {
+		printTree88(numElements, h_bitmask);
+	}
 
-	printTree(numElements, h_bitmask);
+	// Check for Errors
+	cudaError_t cudaError = cudaGetLastError();
+	if (cudaError != cudaSuccess)
+	{
+		std::cout << "\033[31m***" << std::endl
+				  << "***ERROR*** " << cudaError << " - " << cudaGetErrorString(cudaError)
+				  << std::endl
+				  << "***\033[0m" << std::endl;
+
+		return -1;
+	}
+	exit(0);
 
 	// Apply
 	int* d_input;
 	cudaMalloc(&d_input, static_cast<size_t>(packedSize*sizeof(int)));
 
-	ChTimer apply_timer;
-	apply_timer.start();
-
 	simpleApply<<<(packedSize+127)/128, 128>>>(packedSize, d_input, numElements, d_bitmask);
 	cudaDeviceSynchronize();
-
-	apply_timer.stop();
-	printf("Apply kernel time = %f ms\n", apply_timer.getTime() * 1e3);
 
 	int* h_input;
 	cudaMallocHost(&h_input, static_cast<size_t>(packedSize*sizeof(int)));
@@ -604,7 +618,7 @@ int main(int argc, char *argv[])
 	} 
 
 	// Check for Errors
-	cudaError_t cudaError = cudaGetLastError();
+	cudaError = cudaGetLastError();
 	if (cudaError != cudaSuccess)
 	{
 		std::cout << "\033[31m***" << std::endl
@@ -651,7 +665,7 @@ void printHelp(char *argv)
 			  << "" << std::endl;
 }
 
-void printTree(int numElements, long* tree) {
+void printTree115(int numElements, long* tree) {
 	// Print bitmask
 	if (numElements < 100) {
 		std::cout << "bitmask: ";
@@ -701,4 +715,76 @@ void printTree(int numElements, long* tree) {
 		std::cout << reinterpret_cast<unsigned int*>(tree)[i] << " ";
 	}
 	std::cout << std::endl;
+}
+
+void printTree78(int numElements, long* tree) {
+	// Print bitmask
+	if (numElements < 100) {
+		std::cout << "bitmask: ";
+		for (int i = 0; i < numElements; i++) {
+			long v = tree[i];
+			for (int k = sizeof(long)*8-1; k >= 0; k--) {
+				std::cout << ((v >> k) & 1) << "";
+			}
+		}
+		std::cout << std::endl;
+	}
+
+	// Print first layer (short)
+	int offset = numElements*4; // 4 shorts in one long
+	int size = (numElements+1)/2;
+	if (size < 500) {
+		std::cout << "layer 1: ";
+		for (int i = offset; i < offset+size; i++) {
+			std::cout << reinterpret_cast<unsigned short*>(tree)[i] << " ";
+		}
+		std::cout << std::endl;
+	}
+
+	// Print second layer layer (int)
+	offset = offset / 2 + (size+1) / 2;
+	size = (numElements+511) / 512;
+	if (size < 500) {
+		std::cout << "layer 2: ";
+		for (int i = offset; i < offset+size; i++) {
+			std::cout << reinterpret_cast<unsigned int*>(tree)[i] << " ";
+		}
+		std::cout << std::endl;
+	}
+}
+
+void printTree88(int numElements, long* tree) {
+	// Print bitmask
+	if (numElements < 100) {
+		std::cout << "bitmask: ";
+		for (int i = 0; i < numElements; i++) {
+			long v = tree[i];
+			for (int k = sizeof(long)*8-1; k >= 0; k--) {
+				std::cout << ((v >> k) & 1) << "";
+			}
+		}
+		std::cout << std::endl;
+	}
+
+	// Print first layer (short)
+	int offset = numElements*4; // 4 shorts in one long
+	int size = (numElements+3)/4;
+	if (size < 500) {
+		std::cout << "layer 1: ";
+		for (int i = offset; i < offset+size; i++) {
+			std::cout << reinterpret_cast<unsigned short*>(tree)[i] << " ";
+		}
+		std::cout << std::endl;
+	}
+
+	// Print second layer layer (int)
+	offset = offset / 2 + (size+1) / 2;
+	size = (numElements+1023) / 1024;
+	if (size < 500) {
+		std::cout << "layer 2: ";
+		for (int i = offset; i < offset+size; i++) {
+			std::cout << reinterpret_cast<unsigned int*>(tree)[i] << " ";
+		}
+		std::cout << std::endl;
+	}
 }
