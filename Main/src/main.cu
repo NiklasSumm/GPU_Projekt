@@ -150,7 +150,7 @@ setupKernel78(int numElements, long *input)
 		// Load 64 bit bitmask section and count bits
 		unsigned int thread_data = 0;
 		if (elementId < numElements)
-			__popcll(input[elementId]);
+			thread_data = __popcll(input[elementId]);
 
 		// Collectively compute the block-wide inclusive sum
 		BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, aggregate);
@@ -199,7 +199,7 @@ setupKernel88(int numElements, long *input)
 
 		// Every fourth thread writes value in first layer
 		if (((threadIdx.x & 3) == 0) && (elementId < numElements)) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/4] = static_cast<unsigned short>(thread_data + aggregate);
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/4] = static_cast<unsigned short>(thread_data + aggregateSum);
 		}
 
 		// Accumulate the aggregate for the next iteration of the loop 
