@@ -130,61 +130,86 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 	}
 }
 
-
+template <int blockSize>
 __global__ void
 setupKernel78(int numElements, long *input)
 {
-	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
+	int iterations = (511 + blockDim.x) / blockDim.x;
 
-	if (elementId < numElements) {
-		using BlockScan = cub::BlockScan<unsigned int, 512>;
-		__shared__ typename BlockScan::TempStorage temp_storage;
+	unsigned int aggregateSum = 0;
+	unsigned int aggregate = 0;
+
+	using BlockScan = cub::BlockScan<unsigned int, blockSize>;
+	__shared__ typename BlockScan::TempStorage temp_storage;
+
+	unsigned int elementId = 0;
+
+	for (int i = 0; i < iterations; i++) {
+		elementId = blockIdx.x * 512 + i * blockDim.x + threadIdx.x;
 
 		// Load 64 bit bitmask section and count bits
-		unsigned int thread_data = __popcll(input[elementId]);
+		unsigned int thread_data = 0;
+		if (elementId < numElements)
+			__popcll(input[elementId]);
 
 		// Collectively compute the block-wide inclusive sum
-		BlockScan(temp_storage).InclusiveSum(thread_data, thread_data);
+		BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, aggregate);
 
 		// Every second thread writes value in first layer
-		if ((threadIdx.x+1 & 1) == 0) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/2] = static_cast<unsigned short>(thread_data);
+		if (((threadIdx.x+1 & 1) == 0) && (elementId < numElements)) {
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/2] = static_cast<unsigned short>(thread_data + aggregateSum);
 		}
 
-		// Last thread of each full block writes into layer 2
-		if (threadIdx.x == 511) {
-			int offset = numElements*2 + ((numElements+1)/2 + 1)/2;
-			reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data;
-		}
+		// Accumulate the aggregate for the next iteration of the loop 
+		aggregateSum += aggregate;
+	}
+
+	// Last thread of each full block writes into layer 2
+	if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
+		int offset = numElements*2 + ((numElements+1)/2 + 1)/2;
+		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
 	}
 }
 
+template <int blockSize>
 __global__ void
 setupKernel88(int numElements, long *input)
 {
-	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
+	int iterations = (1023 + blockDim.x) / blockDim.x;
+
+	unsigned int aggregateSum = 0;
+	unsigned int aggregate = 0;
+
+	using BlockScan = cub::BlockScan<unsigned int, blockSize>;
+	__shared__ typename BlockScan::TempStorage temp_storage;
+
+	unsigned int elementId = 0;
 
 	if (elementId < numElements) {
-		using BlockScan = cub::BlockScan<unsigned int, 1024>;
-		__shared__ typename BlockScan::TempStorage temp_storage;
+		elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
 
 		// Load 64 bit bitmask section and count bits
-		unsigned int original_data = __popcll(input[elementId]);
+		unsigned int original_data = 0;
+		if (elementId < numElements) 
+			original_data = __popcll(input[elementId]);
 		unsigned int thread_data;
 
 		// Collectively compute the block-wide inclusive sum
-		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data);
+		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
 
 		// Every fourth thread writes value in first layer
-		if ((threadIdx.x & 3) == 0) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/4] = static_cast<unsigned short>(thread_data);
+		if (((threadIdx.x & 3) == 0) && (elementId < numElements)) {
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/4] = static_cast<unsigned short>(thread_data + aggregate);
 		}
 
-		// Last thread of each full block writes into layer 2
-		if (threadIdx.x == 1023) {
-			int offset = numElements*2 + ((numElements+3)/4 + 1)/2;
-			reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
-		}
+		// Accumulate the aggregate for the next iteration of the loop 
+		aggregateSum += aggregate;
+	}
+
+	// Last thread of each full block writes into layer 2
+	if ((threadIdx.x == blockDim - 1) && (elementId < numElements)) {
+		int offset = numElements*2 + ((numElements+3)/4 + 1)/2;
+		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
 	}
 }
 
@@ -478,7 +503,7 @@ void setup115(int numElements, long *d_bitmask) {
 }
 
 void setup78(int numElements, long *d_bitmask) {
-	setupKernel78<<<(numElements+511)/512, 512>>>(numElements, d_bitmask);
+	setupKernel78<128><<<(numElements+511)/512, 128>>>(numElements, d_bitmask);
 
 	int offset = numElements*2 + ((numElements+1)/2 + 1)/2;
 	int size = (numElements+511)/512;
@@ -497,7 +522,7 @@ void setup78(int numElements, long *d_bitmask) {
 }
 
 void setup88(int numElements, long *d_bitmask) {
-	setupKernel88<<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
+	setupKernel88<128><<<(numElements+1023)/1024, 128>>>(numElements, d_bitmask);
 
 	int offset = numElements*2 + ((numElements+3)/4 + 1)/2;
 	int size = (numElements+1023)/1024;
