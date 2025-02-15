@@ -42,8 +42,6 @@ setupKernel1(int numElements, long *input)
 {
 	int iterations = (1023 + blockDim.x) / blockDim.x;
 
-	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
-
 	unsigned int blockSum = 0;
 	unsigned int aggregate = 0;
 
@@ -51,6 +49,7 @@ setupKernel1(int numElements, long *input)
 	__shared__ typename BlockScan::TempStorage temp_storage;
 
 	for (int i = 0; i < iterations; i++) {
+		int elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
 
 		// Load 64 bit bitmask section and count bits
 		unsigned int original_data = 0;
