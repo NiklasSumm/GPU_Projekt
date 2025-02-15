@@ -74,7 +74,6 @@ setupKernel1(int numElements, long *input)
 	if (threadIdx.x == blockDim.x - 1) {
 		int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
 		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
-		printf("%i - %i\n", offset+blockIdx.x, aggregateSum);
 	}
 
 	//int elementId = blockIdx.x * blockDim.x + threadIdx.x;
@@ -139,7 +138,7 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 		input[elementId] = thread_data - correction;
 
 		// First thread of each warp writes in next layer. These values are already fully correct.
-		if (next && (threadIdx.x & 31) == 0) {
+		if (next && ((threadIdx.x & 31)) == 0 && (elementId < numElements)) {
 			input[numElements+(elementId/32)] = thread_data + aggregateSum;
 		}
 
@@ -484,20 +483,20 @@ int layerSize(int layer, int bitmaskSize) {
 void setup115(int numElements, long *d_bitmask) {
 	setupKernel1<1024><<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
 
-	//int offset;
-	//if (layerSize(2, numElements) > 0) {
-	//	printf("running second kernel...\n");
-	//	offset = layerSize(0, numElements) + layerSize(1, numElements);
-	//	int size = layerSize(2, numElements);
-	//	setupKernel2<256><<<(size+1023)/1024, 256>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset]);
-	//}
-//
-	//if (layerSize(4, numElements) > 0) {
-	//	printf("running third kernel...\n");
-	//	offset += layerSize(2, numElements) + layerSize(3, numElements);
-	//	int size = layerSize(4, numElements);
-	//	setupKernel2<256><<<(size+1023)/1024, 256>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset], false, false);
-	//}
+	int offset;
+	if (layerSize(2, numElements) > 0) {
+		printf("running second kernel...\n");
+		offset = layerSize(0, numElements) + layerSize(1, numElements);
+		int size = layerSize(2, numElements);
+		setupKernel2<256><<<(size+1023)/1024, 256>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset]);
+	}
+
+	if (layerSize(4, numElements) > 0) {
+		printf("running third kernel...\n");
+		offset += layerSize(2, numElements) + layerSize(3, numElements);
+		int size = layerSize(4, numElements);
+		setupKernel2<256><<<(size+1023)/1024, 256>>>(size, &reinterpret_cast<unsigned int*>(d_bitmask)[offset], false, false);
+	}
 }
 
 void setup78(int numElements, long *d_bitmask) {
