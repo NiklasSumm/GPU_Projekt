@@ -116,7 +116,7 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 	__shared__ typename BlockScan::TempStorage temp_storage;
 
 	for (int i = 0; i < iterations; i++) {
-		int elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
+		unsigned int elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
 
 		// Load prepared values from previous kernel
 		unsigned int original_data = 0;
