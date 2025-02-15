@@ -59,18 +59,19 @@ setupKernel1(int numElements, long *input)
 		unsigned int thread_data;
 
 		// Collectively compute the block-wide exclusive sum
-		BlockScan(temp_storage).ExclusiveScan(original_data, thread_data, initial_value, cuda::sum<>{}, aggregate);
-		initial_value = aggregate;
+		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
 
 		// First thread of each warp writes in layer 1
 		if ((threadIdx.x & 31) == 0) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data);
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data + initial_value);
 		}
+
+		initial_value += aggregate;
 
 		// Last thread of each full block writes into layer 2
 		if (threadIdx.x == blockDim.x - 1) {
 			int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
-			reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
+			reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregate;
 		}
 	}
 }
