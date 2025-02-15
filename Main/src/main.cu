@@ -116,7 +116,7 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 			input[numElements+(elementId/32)] = thread_data + aggregateSum;
 		}
 
-		aggregate_sum += aggregate;
+		aggregateSum += aggregate;
 	}
 
 	// Last thread of each full block writes into next but one layer. These values need to be corrected.
