@@ -503,7 +503,7 @@ void setup115(int numElements, long *d_bitmask) {
 }
 
 void setup78(int numElements, long *d_bitmask) {
-	setupKernel78<128><<<(numElements+511)/512, 128>>>(numElements, d_bitmask);
+	setupKernel78<512><<<(numElements+511)/512, 512>>>(numElements, d_bitmask);
 
 	int offset = numElements*2 + ((numElements+1)/2 + 1)/2;
 	int size = (numElements+511)/512;
@@ -522,7 +522,7 @@ void setup78(int numElements, long *d_bitmask) {
 }
 
 void setup88(int numElements, long *d_bitmask) {
-	setupKernel88<128><<<(numElements+1023)/1024, 128>>>(numElements, d_bitmask);
+	setupKernel88<1024><<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
 
 	int offset = numElements*2 + ((numElements+3)/4 + 1)/2;
 	int size = (numElements+1023)/1024;
