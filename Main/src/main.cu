@@ -64,6 +64,7 @@ setupKernel1(int numElements, long *input)
 		// First thread of each warp writes in layer 1
 		if ((threadIdx.x & 31) == 0) {
 			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data + blockSum);
+			printf("%i\n", thread_data + blockSu);
 		}
 
 		blockSum += aggregate;
@@ -72,7 +73,7 @@ setupKernel1(int numElements, long *input)
 		if (threadIdx.x == blockDim.x - 1) {
 			int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
 			reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = blockSum;
-			printf("%i\n", blockSum);
+			//printf("%i\n", blockSum);
 		}
 	}
 }
