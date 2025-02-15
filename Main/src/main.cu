@@ -54,7 +54,7 @@ setupKernel1(int numElements, long *input)
 		// Load 64 bit bitmask section and count bits
 		unsigned int original_data = 0;
 		if (elementId < numElements) {
-			__popcll(input[elementId]);
+			original_data = __popcll(input[elementId]);
 		}
 		unsigned int thread_data;
 
@@ -64,7 +64,7 @@ setupKernel1(int numElements, long *input)
 		// First thread of each warp writes in layer 1
 		if ((threadIdx.x & 31) == 0) {
 			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data + blockSum);
-			printf("%i\n", thread_data + blockSum);
+			//printf("%i\n", thread_data + blockSu);
 		}
 
 		blockSum += aggregate;
