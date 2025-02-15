@@ -481,7 +481,7 @@ int layerSize(int layer, int bitmaskSize) {
 }
 
 void setup115(int numElements, long *d_bitmask) {
-	setupKernel1<256><<<(numElements+1023)/1024, 256>>>(numElements, d_bitmask);
+	setupKernel1<1024><<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
 
 	int offset;
 	if (layerSize(2, numElements) > 0) {
