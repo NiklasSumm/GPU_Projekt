@@ -3,13 +3,6 @@
 #include <encodingBase.h>
 
 
-class TreeStructure {
-	public:
-		uint32_t *layers[5];
-		int layerSizes[5];
-};
-
-
 template <int blockSize>
 __global__ void
 setupKernel1(int numElements, long *input)
@@ -137,7 +130,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 					searchIndex--;
 					layerSum = static_cast<uint32_t>(layer[searchIndex]);
 				}
-
+				
 				if (layerSum < bitsToFind) {
 					bitsToFind -= layerSum;
 					nextLayerOffset += searchIndex;
