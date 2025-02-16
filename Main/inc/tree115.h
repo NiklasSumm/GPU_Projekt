@@ -118,14 +118,33 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			if (layerSize > 1) {
 				layerSize = min(layerSize, 32);
 				uint32_t *layer = &structure.layers[layerIdx][nextLayerOffset];
-				for (int i = layerSize-1; i > 0; i--) {
-					uint32_t layerSum = layer[i];
-					if (layerSum < bitsToFind) {
-						bitsToFind -= layerSum;
-						nextLayerOffset += i;
-						break;
-					}
+
+				int searchIndex = layerSize / 2;
+				int searchStep = (layerSize + 1) / 2;
+
+				uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
+
+				while (searchStep > 1){
+					searchStep = (searchStep + 1) / 2;
+					searchIndex = (layerSum < bitsToFind) searchIndex + searchStep : searchIndex - searchStep;
+					searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
+					layerSum = static_cast<uint32_t>(layer[searchIndex]);
 				}
+				if (layerSum >= bitsToFind && serachIndex > 0){
+					searchIndex--;
+					layerSum = static_cast<uint32_t>(layer[i]);
+				}
+				bitsToFind -= layerSum;
+				nextLayerOffset += i;
+
+				//for (int i = layerSize-1; i > 0; i--) {
+				//	uint32_t layerSum = layer[i];
+				//	if (layerSum < bitsToFind) {
+				//		bitsToFind -= layerSum;
+				//		nextLayerOffset += i;
+				//		break;
+				//	}
+				//}
 				nextLayerOffset *= 32;
 			}
 		}
@@ -136,14 +155,32 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			layerSize = min(layerSize, 32);
 			uint16_t *layer = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
 
-			for (int i = layerSize-1; i > 0; i--) {
-				uint32_t layerSum = static_cast<uint32_t>(layer[i]);
-				if (layerSum < bitsToFind) {
-					bitsToFind -= layerSum;
-					nextLayerOffset += i;
-					break;
-				}
+			int searchIndex = layerSize / 2;
+			int searchStep = (layerSize + 1) / 2;
+
+			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
+
+			while (searchStep > 1){
+				searchStep = (searchStep + 1) / 2;
+				searchIndex = (layerSum < bitsToFind) searchIndex + searchStep : searchIndex - searchStep;
+				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
+				layerSum = static_cast<uint32_t>(layer[searchIndex]);
 			}
+			if (layerSum >= bitsToFind && serachIndex > 0){
+				searchIndex--;
+				layerSum = static_cast<uint32_t>(layer[i]);
+			}
+			bitsToFind -= layerSum;
+			nextLayerOffset += i;
+
+			//for (int i = layerSize-1; i > 0; i--) {
+			//	uint32_t layerSum = static_cast<uint32_t>(layer[i]);
+			//	if (layerSum < bitsToFind) {
+			//		bitsToFind -= layerSum;
+			//		nextLayerOffset += i;
+			//		break;
+			//	}
+			//}
 			nextLayerOffset *= 32;
 		}
 
