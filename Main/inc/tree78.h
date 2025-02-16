@@ -53,25 +53,25 @@ __global__ void apply(int numPacked, int *permutation, int bitmaskSize, TreeStru
 		int layerSize = structure.layerSizes[2];
 		if (layerSize > 1) {
 			//layerSize = min(layerSize, 32);
-			uint32_t *layer = &structure.layers[2][0];
+			uint32_t *layer2 = &structure.layers[2][0];
 
 			// Index and step for binary search
 			int searchIndex = layerSize / 2;
 			int searchStep = (layerSize + 1) / 2;
 
-			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
+			uint32_t layerSum = static_cast<uint32_t>(layer2[searchIndex]);
 
 			while (searchStep > 1){
 				searchStep = (searchStep + 1) / 2;
 				searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
 				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
-				layerSum = static_cast<uint32_t>(layer[searchIndex]);
+				layerSum = static_cast<uint32_t>(layer2[searchIndex]);
 			}
 			// After binary search we either landed on the correct value or the one above
 			// So we have to check if the result is correct and if not go to the value below
 			if ((layerSum >= bitsToFind) && (searchIndex > 0)){
 				searchIndex--;
-				layerSum = static_cast<uint32_t>(layer[searchIndex]);
+				layerSum = static_cast<uint32_t>(layer2[searchIndex]);
 			}
 			
 			if (layerSum < bitsToFind) {
@@ -85,25 +85,25 @@ __global__ void apply(int numPacked, int *permutation, int bitmaskSize, TreeStru
 		layerSize = structure.layerSizes[1] - nextLayerOffset;
 		if (layerSize > 1) {
 			//layerSize = min(layerSize, 32);
-			uint16_t *layer = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
+			uint16_t *layer1 = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
 
 			// Index and step for binary search
 			int searchIndex = layerSize / 2;
 			int searchStep = (layerSize + 1) / 2;
 
-			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
+			uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 
 			while (searchStep > 1){
 				searchStep = (searchStep + 1) / 2;
 				searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
 				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
-				layerSum = static_cast<uint32_t>(layer[searchIndex]);
+				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 			}
 			// After binary search we either landed on the correct value or the one above
 			// So we have to check if the result is correct and if not go to the value below
 			if ((layerSum >= bitsToFind) && (searchIndex > 0)){
 				searchIndex--;
-				layerSum = static_cast<uint32_t>(layer[searchIndex]);
+				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 			}
 
 			if (layerSum < bitsToFind) {
@@ -116,7 +116,7 @@ __global__ void apply(int numPacked, int *permutation, int bitmaskSize, TreeStru
 		// Handle virtual layer 0 (before bitmask)
 		uint64_t bitmaskSection;
 		layerSize = structure.layerSizes[0]/2 - nextLayerOffset;
-		layerSize = min(layerSize, 32);
+		//layerSize = min(layerSize, 32);
 		uint64_t *bitLayer = &reinterpret_cast<uint64_t *>(structure.layers[0])[nextLayerOffset];
 		for (int i = 0; i < layerSize; i++) {
 			bitmaskSection = bitLayer[i];
@@ -142,7 +142,7 @@ __global__ void apply(int numPacked, int *permutation, int bitmaskSize, TreeStru
 
 // layerSize calculates the amount of elements per layer, regardless of the actual size on disk.
 // For the bitmask, we return the amount of integers.
-int layerSize(int layer, int bitmaskSize) {
+int layerSize78(int layer, int bitmaskSize) {
 	int size = bitmaskSize * 2; // Bitmask size is size in long
 
 	//int factor = 1;
@@ -164,12 +164,12 @@ int layerSize(int layer, int bitmaskSize) {
 	return size;
 }
 
-int layerOffsetInt(int layer, int bitmaskSize) {
+int layerOffsetInt78(int layer, int bitmaskSize) {
 	if (layer == 0) return 0;
 
 	int offset = 0;
 	for (int i = 0; i < layer; i++) {
-		int size = layerSize(i, bitmaskSize);
+		int size = layerSize78(i, bitmaskSize);
 		if (i == 1) size = (size+1)/2;
 		offset += size;
 	}
@@ -211,8 +211,8 @@ class Tree78 : public EncodingBase {
 
 			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
 			for (int layer = 0; layer < 3; layer++) {
-				ts.layers[layer] = &d_bitmask_int[layerOffsetInt(layer, n)];
-				ts.layerSizes[layer] = layerSize(layer, n);
+				ts.layers[layer] = &d_bitmask_int[layerOffsetInt78(layer, n)];
+				ts.layerSizes[layer] = layerSize78(layer, n);
 			}
 		};
 	
