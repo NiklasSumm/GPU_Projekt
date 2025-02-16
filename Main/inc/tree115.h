@@ -1,5 +1,5 @@
 #include <cub/cub.cuh>
-
+#include <chTimer.hpp>
 
 #include <encodingBase.h>
 
@@ -291,7 +291,19 @@ class Tree115 : public EncodingBase {
 				ts.layerSizes[layer] = layerSize(layer, n);
 			}
 
+			int size_layer0 = ts.layerSizes[0];
+			int size_layer1 = ts.layerSizes[1];
+			int size_layer2 = ts.layerSizes[2];
+			int size_layer3 = ts.layerSizes[3];
+			int size_layer4 = ts.layerSizes[4];
+
+			ChTimer applyTimer;
+
+			applyTimer.start();
 			improvedApply<<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
+			applyTimer.stop();
+			printf("apply kernel ran for %f ms\n", 1e3 * applyTimer.getTime());
+			printf("with a bandwidth of %f GB/s\n", 1e-9 * applyTimer.getBandwidth(size_layer0 * sizeof(int) + size_layer1 * sizeof(short) + size_layer2 * sizeof(int) + size_layer3 * sizeof(int) + size_layer4 * sizeof(int)));
 		};
 	
 		void print(uint64_t *h_bitmask) {
