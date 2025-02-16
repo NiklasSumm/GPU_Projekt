@@ -1,4 +1,5 @@
 #include <cub/cub.cuh>
+#include <chTimer.hpp>
 
 #include <encodingBase.h>
 
@@ -119,6 +120,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				layerSize = min(layerSize, 32);
 				uint32_t *layer = &structure.layers[layerIdx][nextLayerOffset];
 
+				// Index and step for binary search
 				int searchIndex = layerSize / 2;
 				int searchStep = (layerSize + 1) / 2;
 
@@ -130,23 +132,17 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 					searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
 					layerSum = static_cast<uint32_t>(layer[searchIndex]);
 				}
+				// After binary search we either landed on the correct value or the one above
+				// So we have to check if the result is correct and if not go to the value below
 				if ((layerSum >= bitsToFind) && (searchIndex > 0)){
 					searchIndex--;
 					layerSum = static_cast<uint32_t>(layer[searchIndex]);
 				}
+
 				if (layerSum < bitsToFind) {
 					bitsToFind -= layerSum;
 					nextLayerOffset += searchIndex;
 				}
-
-				//for (int i = layerSize-1; i > 0; i--) {
-				//	uint32_t layerSum = layer[i];
-				//	if (layerSum < bitsToFind) {
-				//		bitsToFind -= layerSum;
-				//		nextLayerOffset += i;
-				//		break;
-				//	}
-				//}
 				nextLayerOffset *= 32;
 			}
 		}
@@ -157,6 +153,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			layerSize = min(layerSize, 32);
 			uint16_t *layer = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
 
+			// Index and step for binary search
 			int searchIndex = layerSize / 2;
 			int searchStep = (layerSize + 1) / 2;
 
@@ -168,23 +165,17 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
 				layerSum = static_cast<uint32_t>(layer[searchIndex]);
 			}
+			// After binary search we either landed on the correct value or the one above
+			// So we have to check if the result is correct and if not go to the value below
 			if ((layerSum >= bitsToFind) && (searchIndex > 0)){
 				searchIndex--;
 				layerSum = static_cast<uint32_t>(layer[searchIndex]);
 			}
+
 			if (layerSum < bitsToFind) {
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-
-			//for (int i = layerSize-1; i > 0; i--) {
-			//	uint32_t layerSum = static_cast<uint32_t>(layer[i]);
-			//	if (layerSum < bitsToFind) {
-			//		bitsToFind -= layerSum;
-			//		nextLayerOffset += i;
-			//		break;
-			//	}
-			//}
 			nextLayerOffset *= 32;
 		}
 
@@ -251,20 +242,40 @@ class Tree115 : public EncodingBase {
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
+			//Calculationg layer sizes
+			int size_layer1 = layerSize(1, n);
+			int size_layer2 = layerSize(2, n);
+			int size_layer3 = layerSize(3, n);
+			int size_layer4 = layerSize(4, n);
+
+			printf("running first kernel...\n");
+			ChTimer setupTimer;
+
+			setupTimer.start();
 			setupKernel1<1024><<<(n+1023)/1024, 1024>>>(n, reinterpret_cast<long*>(d_bitmask));
+			setupTimer.stop();
+
+			printf("first kernel ran for %f ms\n", 1e3 * setupTimer.getTime());
+			printf("with a bandwidth of %f GB/s\n", 1e-9 * setupTimer.getBandwidth(n * sizeof(long) + size_layer1 * sizeof(short) + size_layer2 * sizeof(int)));
 
 			if (layerSize(2, n) > 0) {
 				printf("running second kernel...\n");
 				int offset = layerOffsetInt(2, n);
-				int size = layerSize(2, n);
-				setupKernel2<1024><<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<uint32_t*>(d_bitmask)[offset]);
+				setupTimer.start();
+				setupKernel2<1024><<<(size+1023)/1024, 1024>>>(size_layer2, &reinterpret_cast<uint32_t*>(d_bitmask)[offset]);
+				setupTimer.stop();
+				printf("second kernel ran for %f ms\n", 1e3 * setupTimer.getTime());
+				printf("with a bandwidth of %f GB/s\n", 1e-9 * setupTimer.getBandwidth(size_layer3 * sizeof(int) + size_layer2 * sizeof(int)));
 			}
 
 			if (layerSize(4, n) > 0) {
 				printf("running third kernel...\n");
 				int offset = layerOffsetInt(4, n);
-				int size = layerSize(4, n);
-				setupKernel2<1024><<<(size+1023)/1024, 1024>>>(size, &reinterpret_cast<uint32_t*>(d_bitmask)[offset], false, false);
+				setupTimer.start();
+				setupKernel2<1024><<<(size+1023)/1024, 1024>>>(size_layer4, &reinterpret_cast<uint32_t*>(d_bitmask)[offset], false, false);
+				setupTimer.stop();
+				printf("third kernel ran for %f ms\n", 1e3 * setupTimer.getTime());
+				printf("with a bandwidth of %f GB/s\n", 1e-9 * setupTimer.getBandwidth(size_layer4 * sizeof(int) + size_layer3 * sizeof(int)));
 			}
 
 			this->d_bitmask = d_bitmask;
