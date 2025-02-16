@@ -262,7 +262,7 @@ class Tree115 : public EncodingBase {
 				printf("running second kernel...\n");
 				int offset = layerOffsetInt(2, n);
 				setupTimer.start();
-				setupKernel2<1024><<<(size+1023)/1024, 1024>>>(size_layer2, &reinterpret_cast<uint32_t*>(d_bitmask)[offset]);
+				setupKernel2<1024><<<(size_layer2+1023)/1024, 1024>>>(size_layer2, &reinterpret_cast<uint32_t*>(d_bitmask)[offset]);
 				setupTimer.stop();
 				printf("second kernel ran for %f ms\n", 1e3 * setupTimer.getTime());
 				printf("with a bandwidth of %f GB/s\n", 1e-9 * setupTimer.getBandwidth(size_layer3 * sizeof(int) + size_layer2 * sizeof(int)));
@@ -272,7 +272,7 @@ class Tree115 : public EncodingBase {
 				printf("running third kernel...\n");
 				int offset = layerOffsetInt(4, n);
 				setupTimer.start();
-				setupKernel2<1024><<<(size+1023)/1024, 1024>>>(size_layer4, &reinterpret_cast<uint32_t*>(d_bitmask)[offset], false, false);
+				setupKernel2<1024><<<(size_layer4+1023)/1024, 1024>>>(size_layer4, &reinterpret_cast<uint32_t*>(d_bitmask)[offset], false, false);
 				setupTimer.stop();
 				printf("third kernel ran for %f ms\n", 1e3 * setupTimer.getTime());
 				printf("with a bandwidth of %f GB/s\n", 1e-9 * setupTimer.getBandwidth(size_layer4 * sizeof(int) + size_layer3 * sizeof(int)));
