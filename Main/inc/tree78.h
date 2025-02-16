@@ -82,7 +82,7 @@ __global__ void apply(int numPacked, int *permutation, int bitmaskSize, TreeStru
 		}
 
 		// Handle layer 1
-		int layerSize = structure.layerSizes[1] - nextLayerOffset;
+		layerSize = structure.layerSizes[1] - nextLayerOffset;
 		if (layerSize > 1) {
 			//layerSize = min(layerSize, 32);
 			uint16_t *layer = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
@@ -183,7 +183,7 @@ class Tree78 : public EncodingBase {
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
-			setupKernel78<<<(n+511)/512, 512>>>(n, d_bitmask);
+			setupKernel78<512><<<(n+511)/512, 512>>>(n, d_bitmask);
 
 			int offset = n*2 + ((n+1)/2 + 1)/2;
 			int size = (n+511)/512;
