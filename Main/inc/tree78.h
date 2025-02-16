@@ -214,6 +214,8 @@ class Tree78 : public EncodingBase {
 				ts.layers[layer] = &d_bitmask_int[layerOffsetInt78(layer, n)];
 				ts.layerSizes[layer] = layerSize78(layer, n);
 			}
+
+			apply<<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
 		};
 	
 		void print(uint64_t *h_bitmask) {
