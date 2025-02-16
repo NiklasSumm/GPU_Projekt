@@ -135,7 +135,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 					layerSum = static_cast<uint32_t>(layer[searchIndex]);
 				}
 				bitsToFind -= layerSum;
-				nextLayerOffset += i;
+				nextLayerOffset += searchIndex;
 
 				//for (int i = layerSize-1; i > 0; i--) {
 				//	uint32_t layerSum = layer[i];
@@ -171,7 +171,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				layerSum = static_cast<uint32_t>(layer[searchIndex]);
 			}
 			bitsToFind -= layerSum;
-			nextLayerOffset += i;
+			nextLayerOffset += searchIndex;
 
 			//for (int i = layerSize-1; i > 0; i--) {
 			//	uint32_t layerSum = static_cast<uint32_t>(layer[i]);
