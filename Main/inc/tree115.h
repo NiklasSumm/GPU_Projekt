@@ -300,9 +300,10 @@ class Tree115 : public EncodingBase {
 
 			applyTimer.start();
 			improvedApply<<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
+			cudaDeviceSynchronize();
 			applyTimer.stop();
 			printf("apply kernel ran for %f ms\n", 1e3 * applyTimer.getTime());
-			printf("with a bandwidth of %f GB/s\n", 1e-9 * applyTimer.getBandwidth(size_layer0 * sizeof(int) + size_layer1 * sizeof(short) + size_layer2 * sizeof(int) + size_layer3 * sizeof(int) + size_layer4 * sizeof(int)));
+			printf("with a bandwidth of %f GB/s\n", 1e-9 * applyTimer.getBandwidth(packedSize * sizeof(int) + size_layer0 * sizeof(int) + size_layer1 * sizeof(short) + size_layer2 * sizeof(int) + size_layer3 * sizeof(int) + size_layer4 * sizeof(int)));
 		};
 	
 		void print(uint64_t *h_bitmask) {
