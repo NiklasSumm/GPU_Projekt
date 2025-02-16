@@ -9,4 +9,10 @@ class EncodingBase {
         virtual void print(uint64_t *bitmask) = 0; // Print the tree structure to std::cout
 };
 
+class TreeStructure {
+	public:
+		uint32_t *layers[5];
+		int layerSizes[5];
+};
+
 #endif
