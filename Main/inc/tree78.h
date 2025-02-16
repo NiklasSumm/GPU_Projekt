@@ -43,7 +43,9 @@ setupKernel78(int numElements, uint64_t *input)
 	}
 }
 
-__global__ void apply(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure){
+__global__ void
+apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
+{
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (elementIdx < numPacked) {
@@ -215,7 +217,7 @@ class Tree78 : public EncodingBase {
 				ts.layerSizes[layer] = layerSize78(layer, n);
 			}
 
-			apply<<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
+			apply78<<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
 		};
 	
 		void print(uint64_t *h_bitmask) {
