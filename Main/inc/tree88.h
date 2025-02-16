@@ -52,7 +52,7 @@ class Tree88 : public EncodingBase {
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
-			setupKernel88<<<(n+1023)/1024, 1024>>>(n, d_bitmask);
+			setupKernel88<1024><<<(n+1023)/1024, 1024>>>(n, d_bitmask);
 
             int offset = n*2 + ((n+3)/4 + 1)/2;
             int size = (n+1023)/1024;
