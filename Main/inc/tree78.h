@@ -123,7 +123,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 		for (int i = 0; i < layerSize; i++) {
 			bitmaskSection = bitLayer[i];
 			int sectionSum = __popcll(bitmaskSection);
-			if (bitsToFind <= sectionSum) break;
+			if (bitsToFind < sectionSum) break;
 			bitsToFind -= sectionSum;
 			nextLayerOffset++;
 		}
