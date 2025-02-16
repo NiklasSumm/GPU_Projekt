@@ -29,6 +29,8 @@
 #include <encodingBase.h>
 
 #include <tree115.h>
+#include <tree78.h>
+#include <tree88.h>
 
 const static int DEFAULT_NUM_ELEMENTS = 10;
 
@@ -36,92 +38,6 @@ const static int DEFAULT_NUM_ELEMENTS = 10;
 // Function Prototypes
 //
 void printHelp(char *);
-void printTree78(int, long*);
-void printTree88(int, long*);
-
-
-template <int blockSize>
-__global__ void
-setupKernel78(int numElements, long *input)
-{
-	int iterations = (511 + blockDim.x) / blockDim.x;
-
-	unsigned int aggregateSum = 0;
-	unsigned int aggregate = 0;
-
-	using BlockScan = cub::BlockScan<unsigned int, blockSize>;
-	__shared__ typename BlockScan::TempStorage temp_storage;
-
-	unsigned int elementId = 0;
-
-	for (int i = 0; i < iterations; i++) {
-		elementId = blockIdx.x * 512 + i * blockDim.x + threadIdx.x;
-
-		// Load 64 bit bitmask section and count bits
-		unsigned int thread_data = 0;
-		if (elementId < numElements)
-			thread_data = __popcll(input[elementId]);
-
-		// Collectively compute the block-wide inclusive sum
-		BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, aggregate);
-
-		// Every second thread writes value in first layer
-		if (((threadIdx.x+1 & 1) == 0) && (elementId < numElements)) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/2] = static_cast<unsigned short>(thread_data + aggregateSum);
-		}
-
-		// Accumulate the aggregate for the next iteration of the loop 
-		aggregateSum += aggregate;
-	}
-
-	// Last thread of each full block writes into layer 2
-	if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
-		int offset = numElements*2 + ((numElements+1)/2 + 1)/2;
-		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
-	}
-}
-
-template <int blockSize>
-__global__ void
-setupKernel88(int numElements, long *input)
-{
-	int iterations = (1023 + blockDim.x) / blockDim.x;
-
-	unsigned int aggregateSum = 0;
-	unsigned int aggregate = 0;
-
-	using BlockScan = cub::BlockScan<unsigned int, blockSize>;
-	__shared__ typename BlockScan::TempStorage temp_storage;
-
-	unsigned int elementId = 0;
-
-	for (int i = 0; i < iterations; i++) {
-		elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
-
-		// Load 64 bit bitmask section and count bits
-		unsigned int original_data = 0;
-		if (elementId < numElements) 
-			original_data = __popcll(input[elementId]);
-		unsigned int thread_data;
-
-		// Collectively compute the block-wide inclusive sum
-		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
-
-		// Every fourth thread writes value in first layer
-		if (((threadIdx.x & 3) == 0) && (elementId < numElements)) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/4] = static_cast<unsigned short>(thread_data + aggregateSum);
-		}
-
-		// Accumulate the aggregate for the next iteration of the loop 
-		aggregateSum += aggregate;
-	}
-
-	// Last thread of each full block writes into layer 2
-	if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
-		int offset = numElements*2 + ((numElements+3)/4 + 1)/2;
-		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
-	}
-}
 
 
 template<class T>
@@ -140,44 +56,6 @@ int* packedPermutation(int packedSize, int expandedSize, long* h_bitmask) {
 	int* permutation = (int*) malloc(packedSize * sizeof(int));
 	std::copy_if(sequence, sequence + std::ptrdiff_t(expandedSize), permutation, [h_bitmask](int i) { return (h_bitmask[i/64] >> (63-i%64)) & 1; });
 	return permutation;
-}
-
-void setup78(int numElements, long *d_bitmask) {
-	setupKernel78<512><<<(numElements+511)/512, 512>>>(numElements, d_bitmask);
-
-	int offset = numElements*2 + ((numElements+1)/2 + 1)/2;
-	int size = (numElements+511)/512;
-	unsigned int *startPtr = &reinterpret_cast<unsigned int*>(d_bitmask)[offset];
-
-	// Determine temporary device storage requirements
-	void *d_temp_storage = nullptr;
-	size_t temp_storage_bytes = 0;
-	cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
-
-	// Allocate temporary storage
-	cudaMalloc(&d_temp_storage, temp_storage_bytes);
-
-	// Run exclusive prefix sum
-	cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
-}
-
-void setup88(int numElements, long *d_bitmask) {
-	setupKernel88<1024><<<(numElements+1023)/1024, 1024>>>(numElements, d_bitmask);
-
-	int offset = numElements*2 + ((numElements+3)/4 + 1)/2;
-	int size = (numElements+1023)/1024;
-	unsigned int *startPtr = &reinterpret_cast<unsigned int*>(d_bitmask)[offset];
-
-	// Determine temporary device storage requirements
-	void *d_temp_storage = nullptr;
-	size_t temp_storage_bytes = 0;
-	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
-
-	// Allocate temporary storage
-	cudaMalloc(&d_temp_storage, temp_storage_bytes);
-
-	// Run exclusive prefix sum
-	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
 }
 
 //
@@ -225,7 +103,6 @@ int main(int argc, char *argv[])
 		// reinterpret_cast<unsigned int*>(h_bitmask)[i] = std::numeric_limits<unsigned int>::max();
 	}
 
-
 	//
 	// Copy Data to the Device
 	//
@@ -234,32 +111,30 @@ int main(int argc, char *argv[])
 	cudaMemcpy(d_bitmask, h_bitmask, static_cast<size_t>(numElements * sizeof(*d_bitmask)), cudaMemcpyHostToDevice); // Only copy bitmask
 	cudaDeviceSynchronize();
 
-	Tree115 tree = Tree115{};
-	EncodingBase* implementation = &tree;
+	Tree115 tree115 = Tree115{};
+	Tree78 tree78 = Tree78{};
+	Tree88 tree88 = Tree88{};
 
-
+	// Select implementation based on command line parameters
+	EncodingBase* implementation;
 	if (chCommandLineGetBool("115", argc, argv)) {
-		implementation->setup(reinterpret_cast<uint64_t*>(d_bitmask), numElements);
+		implementation = &tree115;
 	} else if (chCommandLineGetBool("78", argc, argv)) {
-		setup78(numElements, d_bitmask);
+		implementation = &tree78;
 	} else if (chCommandLineGetBool("88", argc, argv)) {
-		setup88(numElements, d_bitmask);
+		implementation = &tree88;
+	} else {
+		exit(1);
 	}
-	
 
-	// Synchronize
+	// Setup implementation
+	implementation->setup(reinterpret_cast<uint64_t*>(d_bitmask), numElements);
 	cudaDeviceSynchronize();
 
-	cudaMemcpy(h_bitmask, d_bitmask, static_cast<size_t>(treeSize), cudaMemcpyDeviceToHost); // Copy full tree back
-
-	if (chCommandLineGetBool("115", argc, argv)) {
-		implementation->print(reinterpret_cast<uint64_t*>(h_bitmask));
-	} else if (chCommandLineGetBool("78", argc, argv)) {
-		printTree78(numElements, h_bitmask);
-	} else if (chCommandLineGetBool("88", argc, argv)) {
-		printTree88(numElements, h_bitmask);
-	}
-
+	// Copy full tree back and print structure
+	cudaMemcpy(h_bitmask, d_bitmask, static_cast<size_t>(treeSize), cudaMemcpyDeviceToHost);
+	implementation->print(reinterpret_cast<uint64_t*>(h_bitmask));
+	
 	// Check for Errors
 	cudaError_t cudaError = cudaGetLastError();
 	if (cudaError != cudaSuccess)
@@ -272,25 +147,22 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (!chCommandLineGetBool("115", argc, argv)) {
-		exit(0);
-	}
+	// Apply implementation, producing a full permutation
+	int* d_permutation;
+	cudaMalloc(&d_permutation, static_cast<size_t>(packedSize*sizeof(int)));
 
-	// Apply
-	int* d_input;
-	cudaMalloc(&d_input, static_cast<size_t>(packedSize*sizeof(int)));
-
-	implementation->apply(d_input, packedSize);
+	implementation->apply(d_permutation, packedSize);
 	cudaDeviceSynchronize();
 
-	int* h_input;
-	cudaMallocHost(&h_input, static_cast<size_t>(packedSize*sizeof(int)));
-	cudaMemcpy(h_input, d_input, static_cast<size_t>(packedSize*sizeof(int)), cudaMemcpyDeviceToHost); // Copy input back
+	int* h_permutation;
+	cudaMallocHost(&h_permutation, static_cast<size_t>(packedSize*sizeof(int)));
+	cudaMemcpy(h_permutation, d_permutation, static_cast<size_t>(packedSize*sizeof(int)), cudaMemcpyDeviceToHost); // Copy input back
 
+	// Compare permutation to expected permutation
 	int* permutation = packedPermutation(packedSize, numElements*64, h_bitmask);
 	for (int i = 0; i < packedSize; i++) {
-		if (h_input[i] != permutation[i]) {
-			printf("%d: %d (ref: %d)\n", i, h_input[i], permutation[i]);
+		if (h_permutation[i] != permutation[i]) {
+			printf("%d: %d (ref: %d)\n", i, h_permutation[i], permutation[i]);
 			break;
 		}
 	} 
@@ -341,76 +213,4 @@ void printHelp(char *argv)
 			  << "  --stream" << std::endl
 			  << "    Use stream implementation with aritifical 4 MB limit" << std::endl
 			  << "" << std::endl;
-}
-
-void printTree78(int numElements, long* tree) {
-	// Print bitmask
-	if (numElements < 100) {
-		std::cout << "bitmask: ";
-		for (int i = 0; i < numElements; i++) {
-			long v = tree[i];
-			for (int k = sizeof(long)*8-1; k >= 0; k--) {
-				std::cout << ((v >> k) & 1) << "";
-			}
-		}
-		std::cout << std::endl;
-	}
-
-	// Print first layer (short)
-	int offset = numElements*4; // 4 shorts in one long
-	int size = (numElements+1)/2;
-	if (size < 500) {
-		std::cout << "layer 1: ";
-		for (int i = offset; i < offset+size; i++) {
-			std::cout << reinterpret_cast<unsigned short*>(tree)[i] << " ";
-		}
-		std::cout << std::endl;
-	}
-
-	// Print second layer layer (int)
-	offset = offset / 2 + (size+1) / 2;
-	size = (numElements+511) / 512;
-	if (size < 500) {
-		std::cout << "layer 2: ";
-		for (int i = offset; i < offset+size; i++) {
-			std::cout << reinterpret_cast<unsigned int*>(tree)[i] << " ";
-		}
-		std::cout << std::endl;
-	}
-}
-
-void printTree88(int numElements, long* tree) {
-	// Print bitmask
-	if (numElements < 100) {
-		std::cout << "bitmask: ";
-		for (int i = 0; i < numElements; i++) {
-			long v = tree[i];
-			for (int k = sizeof(long)*8-1; k >= 0; k--) {
-				std::cout << ((v >> k) & 1) << "";
-			}
-		}
-		std::cout << std::endl;
-	}
-
-	// Print first layer (short)
-	int offset = numElements*4; // 4 shorts in one long
-	int size = (numElements+3)/4;
-	if (size < 500) {
-		std::cout << "layer 1: ";
-		for (int i = offset; i < offset+size; i++) {
-			std::cout << reinterpret_cast<unsigned short*>(tree)[i] << " ";
-		}
-		std::cout << std::endl;
-	}
-
-	// Print second layer layer (int)
-	offset = offset / 2 + (size+1) / 2;
-	size = (numElements+1023) / 1024;
-	if (size < 500) {
-		std::cout << "layer 2: ";
-		for (int i = offset; i < offset+size; i++) {
-			std::cout << reinterpret_cast<unsigned int*>(tree)[i] << " ";
-		}
-		std::cout << std::endl;
-	}
 }
