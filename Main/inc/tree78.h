@@ -71,12 +71,12 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			}
 			// After binary search we either landed on the correct value or the one above
 			// So we have to check if the result is correct and if not go to the value below
-			if ((layerSum >= bitsToFind) && (searchIndex > 0)){
-				searchIndex--;
+			if ((layerSum < bitsToFind) && (searchIndex > layerSize - 1)){
+				searchIndex++;
 				layerSum = static_cast<uint32_t>(layer2[searchIndex]);
 			}
 			
-			if (layerSum < bitsToFind) {
+			if (layerSum >= bitsToFind) {
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
@@ -123,7 +123,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 		for (int i = 0; i < layerSize; i++) {
 			bitmaskSection = bitLayer[i];
 			int sectionSum = __popcll(bitmaskSection);
-			if (bitsToFind < sectionSum) break;
+			if (bitsToFind <= sectionSum) break;
 			bitsToFind -= sectionSum;
 			nextLayerOffset++;
 		}
