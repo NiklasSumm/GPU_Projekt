@@ -1,5 +1,5 @@
 #include <cub/cub.cuh>
-#include <chTimer.hpp>
+
 
 #include <encodingBase.h>
 
