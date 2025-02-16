@@ -81,7 +81,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				nextLayerOffset += searchIndex;
 			}
 			if (elementIdx == 127){
-				printf("%i - %i\n", searchIndex, layerSum)
+				printf("%i - %i\n", searchIndex, layerSum);
 			}
 			nextLayerOffset *= 32;
 		}
