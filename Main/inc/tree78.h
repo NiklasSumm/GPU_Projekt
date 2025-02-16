@@ -80,7 +80,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			if (elementIdx == 126){
+			if (elementIdx == 127){
 				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
 			}
 			nextLayerOffset *= 32;
@@ -115,7 +115,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			if (elementIdx == 126){
+			if (elementIdx == 127){
 				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
 			}
 			nextLayerOffset *= 32;
@@ -132,7 +132,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			if (bitsToFind <= sectionSum) break;
 			bitsToFind -= sectionSum;
 			nextLayerOffset++;
-			if (elementIdx == 126){
+			if (elementIdx == 127){
 				printf("%i ---\n", i);
 			}
 		}
