@@ -82,6 +82,9 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
+			if (elementIdx == print_thread){
+				printf("Search index: %i\n", searchIndex);
+			}
 			nextLayerOffset *= 256;
 		}
 
