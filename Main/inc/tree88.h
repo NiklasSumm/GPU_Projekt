@@ -47,8 +47,6 @@ setupKernel88(int numElements, uint64_t *input)
 __global__ void
 apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
 {
-	int print_thread = 14335;
-	
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (elementIdx < numPacked) {
@@ -57,7 +55,6 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 		int nextLayerOffset = 0;
 		int layerSize = structure.layerSizes[2];
 		if (layerSize > 1) {
-			//layerSize = min(layerSize, 32);
 			uint32_t *layer2 = &structure.layers[2][0];
 
 			// Index and step for binary search
@@ -82,22 +79,11 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			if (elementIdx == print_thread){
-				printf("Search index: %i\n", searchIndex);
-			}
 			nextLayerOffset *= 256;
-		}
-
-		if (elementIdx == print_thread){
-			printf("%i\n", nextLayerOffset);
 		}
 
 		// Handle layer 1
 		layerSize = (structure.layerSizes[1] + structure.layerSizes[2] - 1) / structure.layerSizes[2];
-
-		if (elementIdx == print_thread){
-			printf("Layer size: %i\n", layerSize);
-		}
 		
 		if (layerSize > 1) {
 			layerSize = min(layerSize, structure.layerSizes[1] - nextLayerOffset);
@@ -114,10 +100,6 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
 				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
 				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
-				if (elementIdx == print_thread){
-					printf("Search index: %i\n", searchIndex);
-					printf("Layer sum: %i\n", layerSum);
-				}
 			}
 			// After binary search we either landed on the correct value or the one above
 			// So we have to check if the result is correct and if not go to the value below
@@ -129,14 +111,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			if (elementIdx == print_thread){
-				printf("Search index: %i\n", searchIndex);
-			}
 			nextLayerOffset *= 4;
-		}
-
-		if (elementIdx == print_thread){
-			printf("%i\n", nextLayerOffset);
 		}
 
 		// Handle virtual layer 0 (before bitmask)
@@ -150,10 +125,6 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			if (bitsToFind <= sectionSum) break;
 			bitsToFind -= sectionSum;
 			nextLayerOffset++;
-		}
-
-		if (elementIdx == print_thread){
-			printf("%i\n", nextLayerOffset);
 		}
 
 		// Handle bitmask
