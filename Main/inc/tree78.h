@@ -98,7 +98,9 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			int searchStep = (layerSize + 1) / 2;
 
 			uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
-
+			if (elementIdx == print_thread){
+				printf("Layer size: %i\n", layerSize);
+			}
 			while (searchStep > 1){
 				searchStep = (searchStep + 1) / 2;
 				searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
