@@ -80,7 +80,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			nextLayerOffset *= 256;
+			nextLayerOffset *= 512;
 		}
 
 		// Handle layer 1
