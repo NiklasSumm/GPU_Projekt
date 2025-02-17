@@ -136,9 +136,9 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			if (bitsToFind <= sectionSum) break;
 			bitsToFind -= sectionSum;
 			nextLayerOffset++;
-			if (elementIdx == print_thread){
-				printf("iteration %i ---\n", i);
-			}
+			//if (elementIdx == print_thread){
+			//	printf("iteration %i ---\n", i);
+			//}
 		}
 
 		// Handle bitmask
