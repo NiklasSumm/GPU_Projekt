@@ -79,7 +79,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			}
 			
 			if (layerSum <= bitsToFind) {
-				bitsToFind -= (layerSum - static_cast<uint32_t>(layer2[searchIndex]));
+				bitsToFind -= (layerSum - static_cast<uint32_t>(layer2[0]));
 				nextLayerOffset += searchIndex;
 			}
 			if (elementIdx == print_thread){
@@ -116,7 +116,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
 			}
 			if (layerSum < bitsToFind) {
-				bitsToFind -= layerSum;
+				bitsToFind -= (layerSum - static_cast<uint32_t>(layer1[0]));;
 				nextLayerOffset += searchIndex;
 				if (elementIdx == print_thread) printf("layersum subtracted\n");
 			}
