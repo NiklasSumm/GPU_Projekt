@@ -47,6 +47,8 @@ setupKernel88(int numElements, uint64_t *input)
 __global__ void
 apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
 {
+	int print_thread = 14336;
+	
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (elementIdx < numPacked) {
@@ -83,6 +85,10 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			nextLayerOffset *= 256;
 		}
 
+		if (elementIdx = print_thread){
+			printf("%i\n", nextLayerOffset);
+		}
+
 		// Handle layer 1
 		layerSize = structure.layerSizes[1] - nextLayerOffset;
 		if (layerSize > 1) {
@@ -114,6 +120,10 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			nextLayerOffset *= 4;
 		}
 
+		if (elementIdx = print_thread){
+			printf("%i\n", nextLayerOffset);
+		}
+
 		// Handle virtual layer 0 (before bitmask)
 		uint64_t bitmaskSection;
 		layerSize = structure.layerSizes[0]/2 - nextLayerOffset;
@@ -125,6 +135,10 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			if (bitsToFind <= sectionSum) break;
 			bitsToFind -= sectionSum;
 			nextLayerOffset++;
+		}
+
+		if (elementIdx = print_thread){
+			printf("%i\n", nextLayerOffset);
 		}
 
 		// Handle bitmask
