@@ -84,7 +84,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			if (elementIdx == print_thread){
 				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
 			}
-			nextLayerOffset *= 32;
+			nextLayerOffset *= 256;
 		}
 
 		// Handle layer 1
@@ -122,7 +122,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			if (elementIdx == print_thread){
 				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
 			}
-			nextLayerOffset *= 32;
+			nextLayerOffset *= 2;
 		}
 
 		// Handle virtual layer 0 (before bitmask)
