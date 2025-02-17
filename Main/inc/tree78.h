@@ -79,7 +79,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			}
 			
 			if (layerSum <= bitsToFind) {
-				bitsToFind -= layerSum;
+				bitsToFind -= (layerSum - static_cast<uint32_t>(layer2[searchIndex]));
 				nextLayerOffset += searchIndex;
 			}
 			if (elementIdx == print_thread){
