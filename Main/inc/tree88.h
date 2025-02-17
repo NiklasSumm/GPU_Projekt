@@ -71,9 +71,6 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
 				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
 				layerSum = static_cast<uint32_t>(layer2[searchIndex]);
-				if (elementIdx == print_thread){
-					printf("Search index: %i\n", searchIndex);
-				}
 			}
 			// After binary search we either landed on the correct value or the one above
 			// So we have to check if the result is correct and if not go to the value below
@@ -112,6 +109,9 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
 				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
 				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
+				if (elementIdx == print_thread){
+					printf("Search index: %i\n", searchIndex);
+				}
 			}
 			// After binary search we either landed on the correct value or the one above
 			// So we have to check if the result is correct and if not go to the value below
