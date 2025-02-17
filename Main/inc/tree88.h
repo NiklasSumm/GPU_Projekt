@@ -47,7 +47,7 @@ setupKernel88(int numElements, uint64_t *input)
 __global__ void
 apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
 {
-	int print_thread = 14336;
+	int print_thread = 14335;
 	
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
