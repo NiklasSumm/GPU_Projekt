@@ -72,11 +72,11 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			}
 			// After binary search we either landed on the correct value or the one above
 			// So we have to check if the result is correct and if not go to the value below
-			if ((layerSum > bitsToFind) && (searchIndex > 0)){
+			if ((layerSum >= bitsToFind) && (searchIndex > 0)){
 				searchIndex--;
 				layerSum = static_cast<uint32_t>(layer2[searchIndex]);
 			}
-			if (layerSum <= bitsToFind) {
+			if (layerSum < bitsToFind) {
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
@@ -103,11 +103,11 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			}
 			// After binary search we either landed on the correct value or the one above
 			// So we have to check if the result is correct and if not go to the value below
-			if ((layerSum > bitsToFind) && (searchIndex > 0)){
+			if ((layerSum >= bitsToFind) && (searchIndex > 0)){
 				searchIndex--;
 				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 			}
-			if (layerSum <= bitsToFind) {
+			if (layerSum < bitsToFind) {
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
@@ -161,7 +161,7 @@ int layerOffsetInt88(int layer, int bitmaskSize) {
 
 	int offset = 0;
 	for (int i = 0; i < layer; i++) {
-		int size = layerSize78(i, bitmaskSize);
+		int size = layerSize88(i, bitmaskSize);
 		if (i == 1) size = (size+1)/2;
 		offset += size;
 	}
