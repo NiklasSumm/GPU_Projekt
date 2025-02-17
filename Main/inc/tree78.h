@@ -5,7 +5,7 @@
 template <int blockSize>
 __global__ void
 setupKernel78(int numElements, uint64_t *input)
-{
+{	
 	int iterations = (511 + blockDim.x) / blockDim.x;
 
 	unsigned int aggregateSum = 0;
@@ -46,6 +46,8 @@ setupKernel78(int numElements, uint64_t *input)
 __global__ void
 apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
 {
+	int print_thread = 126;
+	
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (elementIdx < numPacked) {
@@ -80,7 +82,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			if (elementIdx == 126){
+			if (elementIdx == print_thread){
 				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
 			}
 			nextLayerOffset *= 32;
@@ -110,13 +112,15 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				searchIndex--;
 				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 			}
-
+			if (elementIdx == print_thread){
+				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
+			}
 			if (layerSum <= bitsToFind) {
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
-				if (elementIdx == 126) printf("layersum subtracted\n");
+				if (elementIdx == print_thread) printf("layersum subtracted\n");
 			}
-			if (elementIdx == 126){
+			if (elementIdx == print_thread){
 				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
 			}
 			nextLayerOffset *= 32;
@@ -133,8 +137,8 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			if (bitsToFind <= sectionSum) break;
 			bitsToFind -= sectionSum;
 			nextLayerOffset++;
-			if (elementIdx == 126){
-				printf("%i ---\n", i);
+			if (elementIdx == print_thread){
+				printf("iteration %i ---\n", i);
 			}
 		}
 
