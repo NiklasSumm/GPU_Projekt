@@ -100,7 +100,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 		}
 		
 		if (layerSize > 1) {
-			layerSize = min(layerSize, structure.layerSizes[1] - nextLayerOffset;);
+			layerSize = min(layerSize, structure.layerSizes[1] - nextLayerOffset);
 			uint16_t *layer1 = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
 
 			// Index and step for binary search
