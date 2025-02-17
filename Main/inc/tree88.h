@@ -44,6 +44,130 @@ setupKernel88(int numElements, uint64_t *input)
 	}
 }
 
+__global__ void
+apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
+{
+	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (elementIdx < numPacked) {
+		uint32_t bitsToFind = elementIdx+1;
+
+		int nextLayerOffset = 0;
+		int layerSize = structure.layerSizes[2];
+		if (layerSize > 1) {
+			//layerSize = min(layerSize, 32);
+			uint32_t *layer2 = &structure.layers[2][0];
+
+			// Index and step for binary search
+			int searchIndex = layerSize / 2;
+			int searchStep = (layerSize + 1) / 2;
+
+			uint32_t layerSum = static_cast<uint32_t>(layer2[searchIndex]);
+
+			while (searchStep > 1){
+				searchStep = (searchStep + 1) / 2;
+				searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
+				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
+				layerSum = static_cast<uint32_t>(layer2[searchIndex]);
+			}
+			// After binary search we either landed on the correct value or the one above
+			// So we have to check if the result is correct and if not go to the value below
+			if ((layerSum >= bitsToFind) && (searchIndex > 0)){
+				searchIndex--;
+				layerSum = static_cast<uint32_t>(layer2[searchIndex]);
+			}
+			if (layerSum < bitsToFind) {
+				bitsToFind -= layerSum;
+				nextLayerOffset += searchIndex;
+			}
+			nextLayerOffset *= 32;
+		}
+
+		// Handle layer 1
+		layerSize = structure.layerSizes[1] - nextLayerOffset;
+		if (layerSize > 1) {
+			//layerSize = min(layerSize, 32);
+			uint16_t *layer1 = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
+
+			// Index and step for binary search
+			int searchIndex = layerSize / 2;
+			int searchStep = (layerSize + 1) / 2;
+
+			uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
+
+			while (searchStep > 1){
+				searchStep = (searchStep + 1) / 2;
+				searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
+				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
+				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
+			}
+			// After binary search we either landed on the correct value or the one above
+			// So we have to check if the result is correct and if not go to the value below
+			if ((layerSum >= bitsToFind) && (searchIndex > 0)){
+				searchIndex--;
+				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
+			}
+			if (layerSum < bitsToFind) {
+				bitsToFind -= layerSum;
+				nextLayerOffset += searchIndex;
+			}
+			nextLayerOffset *= 32;
+		}
+
+		// Handle virtual layer 0 (before bitmask)
+		uint64_t bitmaskSection;
+		layerSize = structure.layerSizes[0]/2 - nextLayerOffset;
+		//layerSize = min(layerSize, 32);
+		uint64_t *bitLayer = &reinterpret_cast<uint64_t *>(structure.layers[0])[nextLayerOffset];
+		for (int i = 0; i < layerSize; i++) {
+			bitmaskSection = bitLayer[i];
+			int sectionSum = __popcll(bitmaskSection);
+			if (bitsToFind <= sectionSum) break;
+			bitsToFind -= sectionSum;
+			nextLayerOffset++;
+		}
+
+		// Handle bitmask
+		int expandedIndex = nextLayerOffset * 64;
+		for (int k = sizeof(long)*8-1; k >= 0; k--) {
+			if ((bitmaskSection >> k) & 1) {
+				if (--bitsToFind == 0) {
+					expandedIndex += ((sizeof(long)*8-1)-k);
+					break;
+				}
+			}
+		}
+		permutation[elementIdx] = expandedIndex;
+	}
+}
+
+// layerSize calculates the amount of elements per layer, regardless of the actual size on disk.
+// For the bitmask, we return the amount of integers.
+int layerSize88(int layer, int bitmaskSize) {
+	int size = bitmaskSize * 2; // Bitmask size is size in long
+
+	if (layer == 1){
+		size = (bitmaskSize+3)/4;
+	}
+	if (layer == 2){
+		size = (bitmaskSize+1023)/1024;
+	}
+
+	return size;
+}
+
+int layerOffsetInt88(int layer, int bitmaskSize) {
+	if (layer == 0) return 0;
+
+	int offset = 0;
+	for (int i = 0; i < layer; i++) {
+		int size = layerSize78(i, bitmaskSize);
+		if (i == 1) size = (size+1)/2;
+		offset += size;
+	}
+	return offset;
+}
+
 
 class Tree88 : public EncodingBase {
 	private:
