@@ -150,7 +150,7 @@ int layerSize88(int layer, int bitmaskSize) {
 		size = (bitmaskSize+3)/4;
 	}
 	if (layer == 2){
-		size = (bitmaskSize+1023)/1024;
+		size = (bitmaskSize+2047)/2048;
 	}
 
 	return size;
