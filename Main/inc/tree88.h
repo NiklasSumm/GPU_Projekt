@@ -85,7 +85,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			nextLayerOffset *= 256;
 		}
 
-		if (elementIdx = print_thread){
+		if (elementIdx == print_thread){
 			printf("%i\n", nextLayerOffset);
 		}
 
@@ -120,7 +120,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			nextLayerOffset *= 4;
 		}
 
-		if (elementIdx = print_thread){
+		if (elementIdx == print_thread){
 			printf("%i\n", nextLayerOffset);
 		}
 
@@ -137,7 +137,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			nextLayerOffset++;
 		}
 
-		if (elementIdx = print_thread){
+		if (elementIdx == print_thread){
 			printf("%i\n", nextLayerOffset);
 		}
 
