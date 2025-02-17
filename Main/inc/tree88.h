@@ -199,6 +199,16 @@ class Tree88 : public EncodingBase {
 
 		void apply(int *permutation, int packedSize) {
 			// TODO
+
+			TreeStructure ts;
+
+			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
+			for (int layer = 0; layer < 3; layer++) {
+				ts.layers[layer] = &d_bitmask_int[layerOffsetInt88(layer, n)];
+				ts.layerSizes[layer] = layerSize88(layer, n);
+			}
+
+			apply88<<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
 		};
 	
 		void print(uint64_t *h_bitmask) {
