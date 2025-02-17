@@ -111,9 +111,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 				if (elementIdx == print_thread){
 					printf("Search index: %i\n", searchIndex);
-					if (searchIndex == 312){
-						printf("layerSum: %i\n", layerSum);
-					}
+					printf("Layer sum: %i\n", layerSum);
 				}
 			}
 			// After binary search we either landed on the correct value or the one above
