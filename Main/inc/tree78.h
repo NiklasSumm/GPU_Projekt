@@ -45,9 +45,7 @@ setupKernel78(int numElements, uint64_t *input)
 
 __global__ void
 apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
-{
-	int print_thread = 0;
-	
+{	
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (elementIdx < numPacked) {
@@ -81,9 +79,6 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= (layerSum - static_cast<uint32_t>(layer2[0]));
 				nextLayerOffset += searchIndex;
 			}
-			if (elementIdx == print_thread){
-				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
-			}
 			nextLayerOffset *= 256;
 		}
 
@@ -98,18 +93,11 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			int searchStep = (layerSize + 1) / 2;
 
 			uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
-			if (elementIdx == print_thread){
-				printf("Layer size: %i\n", layerSize);
-			}
 			while (searchStep > 1){
 				searchStep = (searchStep + 1) / 2;
 				searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
 				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
 				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
-				if (elementIdx == print_thread){
-					printf("Serach Index: %i\n", searchIndex);
-					printf("Layer sum: %i\n", layerSum);
-				}
 			}
 			// After binary search we either landed on the correct value or the one above
 			// So we have to check if the result is correct and if not go to the value below
@@ -117,16 +105,10 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				searchIndex++;
 				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 			}
-			if (elementIdx == print_thread){
-				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
-			}
 			if (layerSum >= bitsToFind) {
 				bitsToFind -= (layerSum - static_cast<uint32_t>(layer1[0]));;
 				nextLayerOffset += searchIndex;
 				if (elementIdx == print_thread) printf("layersum subtracted\n");
-			}
-			if (elementIdx == print_thread){
-				printf("%i - %i - %i\n", searchIndex, layerSum, bitsToFind);
 			}
 			nextLayerOffset *= 2;
 		}
