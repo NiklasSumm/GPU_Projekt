@@ -168,7 +168,6 @@ int layerOffsetInt88(int layer, int bitmaskSize) {
 	return offset;
 }
 
-
 class Tree88 : public EncodingBase {
 	private:
 		uint64_t *d_bitmask;
@@ -198,8 +197,6 @@ class Tree88 : public EncodingBase {
 		};
 
 		void apply(int *permutation, int packedSize) {
-			// TODO
-
 			TreeStructure ts;
 
 			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
