@@ -5,7 +5,7 @@
 template <int blockSize>
 __global__ void
 setupKernel78(int numElements, uint64_t *input)
-{	
+{
 	int iterations = (511 + blockDim.x) / blockDim.x;
 
 	unsigned int aggregateSum = 0;
@@ -115,7 +115,6 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 		// Handle virtual layer 0 (before bitmask)
 		uint64_t bitmaskSection;
 		layerSize = structure.layerSizes[0]/2 - nextLayerOffset;
-		//layerSize = min(layerSize, 32);
 		uint64_t *bitLayer = &reinterpret_cast<uint64_t *>(structure.layers[0])[nextLayerOffset];
 		for (int i = 0; i < layerSize; i++) {
 			bitmaskSection = bitLayer[i];
@@ -123,9 +122,6 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			if (bitsToFind <= sectionSum) break;
 			bitsToFind -= sectionSum;
 			nextLayerOffset++;
-			//if (elementIdx == print_thread){
-			//	printf("iteration %i ---\n", i);
-			//}
 		}
 
 		// Handle bitmask
@@ -147,21 +143,12 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 int layerSize78(int layer, int bitmaskSize) {
 	int size = bitmaskSize * 2; // Bitmask size is size in long
 
-	//int factor = 1;
-
 	if (layer == 1){
 		size = (bitmaskSize+1)/2;
 	}
 	if (layer == 2){
 		size = (bitmaskSize+511)/512;
 	}
-	//for (int i = layer; i > 0; i--) {
-	//	factor *= 32;
-	//}
-//
-	//if (layer > 0) {
-	//	size = (bitmaskSize+factor-1)/factor;
-	//}
 
 	return size;
 }
@@ -207,8 +194,6 @@ class Tree78 : public EncodingBase {
 		};
 
 		void apply(int *permutation, int packedSize) {
-			// TODO
-
 			TreeStructure ts;
 
 			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
@@ -256,3 +241,4 @@ class Tree78 : public EncodingBase {
 			}
 		};
 };
+
