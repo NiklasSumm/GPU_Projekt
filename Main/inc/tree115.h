@@ -135,7 +135,6 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				//}
 
 				int nextPowOf2 = layerSize;
-				int nextPowOf2 = layerSize;
 				if (nextPowOf2 & (nextPowOf2 - 1)){
 					nextPowOf2 |= nextPowOf2 >> 1;
     				nextPowOf2 |= nextPowOf2 >> 2;
