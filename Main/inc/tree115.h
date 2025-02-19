@@ -125,34 +125,34 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				}
 
 				// Index and step for binary search
-				int searchIndex = nextPowOf2 / 2;
-				int searchStep = searchIndex;
-	
-				uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
-	
-				while (searchStep > 1){
-					searchStep = searchStep / 2;
-					searchIndex = (layerSum < bitsToFind) * (searchIndex + searchStep) + !(layerSum < bitsToFind) * (searchIndex - searchStep);
-					searchIndex = min(searchIndex, layerSize - 1);
-					layerSum = static_cast<uint32_t>(layer[searchIndex]);
-				}
-				// After binary search we either landed on the correct value or the one above
-				// So we have to check if the result is correct and if not go to the value below
-				if ((layerSum >= bitsToFind) && (searchIndex > 0)){
-					searchIndex--;
-					layerSum = static_cast<uint32_t>(layer[searchIndex]);
-				}
-
-				//int searchIndex = 0;
-				//int searchStep = nextPowOf2;
+				//int searchIndex = nextPowOf2 / 2;
+				//int searchStep = searchIndex;
+//
+				//uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
 //
 				//while (searchStep > 1){
-				//	searchStep = (searchStep + 1) / 2;
-				//	int testIndex = min(searchIndex + searchStep, layerSize - 1);
-				//	searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
+				//	searchStep = searchStep / 2;
+				//	searchIndex = (layerSum < bitsToFind) * (searchIndex + searchStep) + !(layerSum < bitsToFind) * (searchIndex - searchStep);
+				//	searchIndex = min(searchIndex, layerSize - 1);
+				//	layerSum = static_cast<uint32_t>(layer[searchIndex]);
 				//}
-				//searchIndex = min(searchIndex, layerSize - 1);
-				//uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
+				//// After binary search we either landed on the correct value or the one above
+				//// So we have to check if the result is correct and if not go to the value below
+				//if ((layerSum >= bitsToFind) && (searchIndex > 0)){
+				//	searchIndex--;
+				//	layerSum = static_cast<uint32_t>(layer[searchIndex]);
+				//}
+
+				int searchIndex = 0;
+				int searchStep = nextPowOf2;
+
+				while (searchStep > 1){
+					searchStep = (searchStep + 1) / 2;
+					int testIndex = min(searchIndex + searchStep, layerSize - 1);
+					searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
+				}
+				searchIndex = min(searchIndex, layerSize - 1);
+				uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
 				
 				if (layerSum < bitsToFind) {
 					bitsToFind -= layerSum;
@@ -180,34 +180,34 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			}
 
 			// Index and step for binary search
-			int searchIndex = nextPowOf2 / 2;
-			int searchStep = searchIndex;
-
-			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
-
-			while (searchStep > 1){
-				searchStep = searchStep / 2;
-				searchIndex = (layerSum < bitsToFind) * (searchIndex + searchStep) + !(layerSum < bitsToFind) * (searchIndex - searchStep);
-				searchIndex = min(searchIndex, layerSize - 1);
-				layerSum = static_cast<uint32_t>(layer[searchIndex]);
-			}
-			// After binary search we either landed on the correct value or the one above
-			// So we have to check if the result is correct and if not go to the value below
-			if ((layerSum >= bitsToFind) && (searchIndex > 0)){
-				searchIndex--;
-				layerSum = static_cast<uint32_t>(layer[searchIndex]);
-			}
-
-			//int searchIndex = 0;
-			//int searchStep = nextPowOf2; //std::bit_ceil(layerSize);
+			//int searchIndex = nextPowOf2 / 2;
+			//int searchStep = searchIndex;
+//
+			//uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
 //
 			//while (searchStep > 1){
 			//	searchStep = searchStep / 2;
-			//	int testIndex = min(searchIndex + searchStep, layerSize - 1);
-			//	searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
+			//	searchIndex = (layerSum < bitsToFind) * (searchIndex + searchStep) + !(layerSum < bitsToFind) * (searchIndex - searchStep);
+			//	searchIndex = min(searchIndex, layerSize - 1);
+			//	layerSum = static_cast<uint32_t>(layer[searchIndex]);
 			//}
-			//searchIndex = min(searchIndex, layerSize - 1);
-			//uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
+			//// After binary search we either landed on the correct value or the one above
+			//// So we have to check if the result is correct and if not go to the value below
+			//if ((layerSum >= bitsToFind) && (searchIndex > 0)){
+			//	searchIndex--;
+			//	layerSum = static_cast<uint32_t>(layer[searchIndex]);
+			//}
+
+			int searchIndex = 0;
+			int searchStep = nextPowOf2; //std::bit_ceil(layerSize);
+
+			while (searchStep > 1){
+				searchStep = searchStep / 2;
+				int testIndex = min(searchIndex + searchStep, layerSize - 1);
+				searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
+			}
+			searchIndex = min(searchIndex, layerSize - 1);
+			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
 
 			if (layerSum < bitsToFind) {
 				bitsToFind -= layerSum;
