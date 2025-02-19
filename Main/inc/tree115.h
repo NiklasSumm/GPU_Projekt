@@ -11,7 +11,7 @@ setupKernel1(int numElements, long *input)
 {
 	int iterations = (1023 + blockDim.x) / blockDim.x;
 
-	//unsigned int aggregateSum = 0;
+	unsigned int aggregateSum = 0;
 	unsigned int aggregate = 0;
 
 	using BlockScan = cub::BlockScan<unsigned int, blockSize>;
@@ -29,21 +29,22 @@ setupKernel1(int numElements, long *input)
 		unsigned int thread_data;
 
 		// Collectively compute the block-wide exclusive sum
-		BlockScan(temp_storage).ExclusiveScan(original_data, thread_data, aggregate, thrust::plus<unsigned int>(), aggregate);
+		//BlockScan(temp_storage).ExclusiveScan(original_data, thread_data, aggregate, thrust::plus<unsigned int>(), aggregate);
+		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
 
 		// First thread of each warp writes in layer 1
 		if (((threadIdx.x & 31) == 0) && (elementId < numElements)) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data);
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data + aggregateSum);
 		}
 
 		// Accumulate the aggregate for the next iteration of the loop 
-		//aggregateSum += aggregate;
+		aggregateSum += aggregate;
 	}
 
 	// Last thread of each full block writes into layer 2
 	if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
 		int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
-		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregate;
+		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
 	}
 }
 
