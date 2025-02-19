@@ -132,19 +132,19 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				//	layerSum = static_cast<uint32_t>(layer[searchIndex]);
 				//}
 
-				//int nextPowOf2 = layerSize;
-				//if (nextPowOf2 & (nextPowOf2 - 1)){
-				//	nextPowOf2 |= nextPowOf2 >> 1;
-    			//	nextPowOf2 |= nextPowOf2 >> 2;
-    			//	nextPowOf2 |= nextPowOf2 >> 4;
-    			//	nextPowOf2 |= nextPowOf2 >> 8;
-    			//	nextPowOf2 |= nextPowOf2 >> 16;
-//
-				//	nextPowOf2 = nextPowOf2 ^ (nextPowOf2 << 1);
-				//}
+				int nextPowOf2 = layerSize;
+				if (nextPowOf2 & (nextPowOf2 - 1)){
+					nextPowOf2 |= nextPowOf2 >> 1;
+    				nextPowOf2 |= nextPowOf2 >> 2;
+    				nextPowOf2 |= nextPowOf2 >> 4;
+    				nextPowOf2 |= nextPowOf2 >> 8;
+    				nextPowOf2 |= nextPowOf2 >> 16;
+
+					nextPowOf2 = nextPowOf2 ^ (nextPowOf2 << 1);
+				}
 
 				int searchIndex = 0;
-				int searchStep = layerSize;
+				int searchStep = nextPowOf2;
 
 				while (searchStep > 1){
 					searchStep = (searchStep + 1) / 2;
@@ -187,22 +187,22 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			//	layerSum = static_cast<uint32_t>(layer[searchIndex]);
 			//}
 
-			//int nextPowOf2 = layerSize;
-			//if (nextPowOf2 & (nextPowOf2 - 1)){
-			//	nextPowOf2 |= nextPowOf2 >> 1;
-    		//	nextPowOf2 |= nextPowOf2 >> 2;
-    		//	nextPowOf2 |= nextPowOf2 >> 4;
-    		//	nextPowOf2 |= nextPowOf2 >> 8;
-    		//	nextPowOf2 |= nextPowOf2 >> 16;
-//
-			//	nextPowOf2 = nextPowOf2 ^ (nextPowOf2 << 1);
-			//}
+			int nextPowOf2 = layerSize;
+			if (nextPowOf2 & (nextPowOf2 - 1)){
+				nextPowOf2 |= nextPowOf2 >> 1;
+    			nextPowOf2 |= nextPowOf2 >> 2;
+    			nextPowOf2 |= nextPowOf2 >> 4;
+    			nextPowOf2 |= nextPowOf2 >> 8;
+    			nextPowOf2 |= nextPowOf2 >> 16;
+
+				nextPowOf2 = nextPowOf2 ^ (nextPowOf2 << 1);
+			}
 
 			int searchIndex = 0;
-			int searchStep = layerSize; //std::bit_ceil(layerSize);
+			int searchStep = nextPowOf2; //std::bit_ceil(layerSize);
 
 			while (searchStep > 1){
-				searchStep = (searchStep - 1) / 2;
+				searchStep = searchStep / 2;
 				int testIndex = min(searchIndex + searchStep, layerSize - 1);
 				searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
 			}
