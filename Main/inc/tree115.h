@@ -1,6 +1,7 @@
 #include <cub/cub.cuh>
 #include <bit>
 #include <encodingBase.h>
+#include<iostream>
 
 
 template <int blockSize>
@@ -311,6 +312,16 @@ class Tree115 : public EncodingBase {
 		};
 
 		void apply(int *permutation, int packedSize) {
+			if (__cplusplus == 202101L) std::cout << "C++23";
+    else if (__cplusplus == 202002L) std::cout << "C++20";
+    else if (__cplusplus == 201703L) std::cout << "C++17";
+    else if (__cplusplus == 201402L) std::cout << "C++14";
+    else if (__cplusplus == 201103L) std::cout << "C++11";
+    else if (__cplusplus == 199711L) std::cout << "C++98";
+    else std::cout << "pre-standard C++." << __cplusplus;
+    std::cout << "\n";
+
+
 			TreeStructure ts;
 
 			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
