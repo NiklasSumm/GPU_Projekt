@@ -179,7 +179,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			//	layerSum = static_cast<uint32_t>(layer[searchIndex]);
 			//}
 
-			if (threadIdx.x == print_thread) printf("%i\n", bitsToFind);
+			if (elementIdx == print_thread) printf("%i\n", bitsToFind);
 
 			int nextPowOf2 = 1;
 			while (nextPowOf2 < layerSize) nextPowOf2 *= 2;
@@ -191,7 +191,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				searchStep = searchStep / 2;
 				int testIndex = min(searchIndex + searchStep, layerSize - 1);
 				searchIndex = (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * testIndex;
-				if (threadIdx.x == print_thread) printf("%i\n", searchIndex);
+				if (elementIdx == print_thread) printf("%i\n", searchIndex);
 			}
 			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
 
