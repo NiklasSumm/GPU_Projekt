@@ -121,7 +121,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
     				nextPowOf2 |= nextPowOf2 >> 8;
     				nextPowOf2 |= nextPowOf2 >> 16;
 
-					nextPowOf2 = nextPowOf2 ^ (nextPowOf2 << 1);
+					nextPowOf2 = (nextPowOf2 ^ (nextPowOf2 << 1)) - 1;
 				}
 
 				// Index and step for binary search
@@ -176,7 +176,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
     			nextPowOf2 |= nextPowOf2 >> 8;
     			nextPowOf2 |= nextPowOf2 >> 16;
 
-				nextPowOf2 = nextPowOf2 ^ (nextPowOf2 << 1);
+				nextPowOf2 = (nextPowOf2 ^ (nextPowOf2 << 1)) - 1;
 			}
 
 			// Index and step for binary search
