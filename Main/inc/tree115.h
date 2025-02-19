@@ -1,5 +1,5 @@
 #include <cub/cub.cuh>
-#include <bit>
+#include <cuda/std/bit>
 #include <encodingBase.h>
 #include<iostream>
 
