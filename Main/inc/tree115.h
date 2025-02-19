@@ -199,7 +199,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			//}
 
 			int searchIndex = 0;
-			int searchStep = cuda::std::bit_ceil<int>(layerSize);
+			int searchStep = ::cuda::std::bit_ceil<int>(layerSize);
 
 			while (searchStep > 1){
 				searchStep >>= 1;
