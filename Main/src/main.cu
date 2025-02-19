@@ -112,8 +112,8 @@ int main(int argc, char *argv[])
 	cudaDeviceSynchronize();
 
 	Tree115 tree115 = Tree115{};
-	Tree78<512> tree78 = Tree78<128>{};
-	Tree88<1024> tree88 = Tree88<256>{};
+	Tree78<512> tree78 = Tree78<512>{};
+	Tree88<1024> tree88 = Tree88<1024>{};
 
 	// Select implementation based on command line parameters
 	EncodingBase* implementation;
