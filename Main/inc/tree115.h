@@ -272,6 +272,7 @@ int layerOffsetInt(int layer, int bitmaskSize) {
 	return offset;
 }
 
+template <int blockSize>
 class Tree115 : public EncodingBase {
 	private:
 		uint64_t *d_bitmask;
@@ -289,7 +290,7 @@ class Tree115 : public EncodingBase {
 			ChTimer setupTimer;
 
 			setupTimer.start();
-			setupKernel1<1024><<<(n+1023)/1024, 1024>>>(n, reinterpret_cast<long*>(d_bitmask));
+			setupKernel1<blockSize><<<(n+1023)/1024, blockSize>>>(n, reinterpret_cast<long*>(d_bitmask));
 			cudaDeviceSynchronize();
 			setupTimer.stop();
 
@@ -300,7 +301,7 @@ class Tree115 : public EncodingBase {
 				printf("running second kernel...\n");
 				int offset = layerOffsetInt(2, n);
 				setupTimer.start();
-				setupKernel2<1024><<<(size_layer2+1023)/1024, 1024>>>(size_layer2, &reinterpret_cast<uint32_t*>(d_bitmask)[offset]);
+				setupKernel2<blockSize><<<(size_layer2+1023)/1024, blockSize>>>(size_layer2, &reinterpret_cast<uint32_t*>(d_bitmask)[offset]);
 				cudaDeviceSynchronize();
 				setupTimer.stop();
 				printf("second kernel ran for %f ms\n", 1e3 * setupTimer.getTime());
@@ -311,7 +312,7 @@ class Tree115 : public EncodingBase {
 				printf("running third kernel...\n");
 				int offset = layerOffsetInt(4, n);
 				setupTimer.start();
-				setupKernel2<1024><<<(size_layer4+1023)/1024, 1024>>>(size_layer4, &reinterpret_cast<uint32_t*>(d_bitmask)[offset], false, false);
+				setupKernel2<blockSize><<<(size_layer4+1023)/1024, blockSize>>>(size_layer4, &reinterpret_cast<uint32_t*>(d_bitmask)[offset], false, false);
 				cudaDeviceSynchronize();
 				setupTimer.stop();
 				printf("third kernel ran for %f ms\n", 1e3 * setupTimer.getTime());
