@@ -111,9 +111,9 @@ int main(int argc, char *argv[])
 	cudaMemcpy(d_bitmask, h_bitmask, static_cast<size_t>(numElements * sizeof(*d_bitmask)), cudaMemcpyHostToDevice); // Only copy bitmask
 	cudaDeviceSynchronize();
 
-	Tree115 tree115 = Tree115{};
-	Tree78<512> tree78 = Tree78<512>{};
-	Tree88<1024> tree88 = Tree88<1024>{};
+	Tree115<256> tree115 = Tree115<256>{};
+	Tree78<128> tree78 = Tree78<128>{};
+	Tree88<256> tree88 = Tree88<256>{};
 
 	// Select implementation based on command line parameters
 	EncodingBase* implementation;
