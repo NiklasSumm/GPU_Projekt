@@ -5,7 +5,7 @@
 template <int blockSize>
 __global__ void
 setupKernel78(int numElements, uint64_t *input)
-{
+{	
 	int iterations = (511 + blockDim.x) / blockDim.x;
 
 	unsigned int aggregateSum = 0;
@@ -165,6 +165,7 @@ int layerOffsetInt78(int layer, int bitmaskSize) {
 	return offset;
 }
 
+template <int blockSize>
 class Tree78 : public EncodingBase {
 	private:
 		uint64_t *d_bitmask;
@@ -172,7 +173,7 @@ class Tree78 : public EncodingBase {
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
-			setupKernel78<512><<<(n+511)/512, 512>>>(n, d_bitmask);
+			setupKernel78<blockSize><<<(n+511)/512, blockSize>>>(n, d_bitmask);
 
 			int offset = n*2 + ((n+1)/2 + 1)/2;
 			int size = (n+511)/512;
@@ -194,6 +195,8 @@ class Tree78 : public EncodingBase {
 		};
 
 		void apply(int *permutation, int packedSize) {
+			// TODO
+
 			TreeStructure ts;
 
 			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
@@ -241,4 +244,3 @@ class Tree78 : public EncodingBase {
 			}
 		};
 };
-
