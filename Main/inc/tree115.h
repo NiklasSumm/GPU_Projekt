@@ -101,8 +101,6 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 __global__ void
 improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
 {
-	int print_thread = 4096; 
-
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (elementIdx < numPacked) {
@@ -144,10 +142,9 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 
 					nextPowOf2 = nextPowOf2 ^ (nextPowOf2 << 1);
 				}
-				//while (nextPowOf2 < layerSize) nextPowOf2 *= 2;
 
 				int searchIndex = 0;
-				int searchStep = nextPowOf2; //std::bit_ceil(layerSize);
+				int searchStep = nextPowOf2;
 
 				while (searchStep > 1){
 					searchStep = searchStep / 2;
@@ -190,8 +187,6 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			//	layerSum = static_cast<uint32_t>(layer[searchIndex]);
 			//}
 
-			if (elementIdx == print_thread) printf("%i\n", bitsToFind);
-
 			int nextPowOf2 = layerSize;
 			if (nextPowOf2 & (nextPowOf2 - 1)){
 				nextPowOf2 |= nextPowOf2 >> 1;
@@ -202,7 +197,6 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 
 				nextPowOf2 = nextPowOf2 ^ (nextPowOf2 << 1);
 			}
-			//while (nextPowOf2 < layerSize) nextPowOf2 *= 2;
 
 			int searchIndex = 0;
 			int searchStep = nextPowOf2; //std::bit_ceil(layerSize);
@@ -211,7 +205,6 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				searchStep = searchStep / 2;
 				int testIndex = min(searchIndex + searchStep, layerSize - 1);
 				searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
-				if (elementIdx == print_thread) printf("%i\n", searchIndex);
 			}
 			searchIndex = min(searchIndex, layerSize - 1);
 			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
