@@ -1,7 +1,8 @@
 #include <cub/cub.cuh>
 #include <cuda/std/bit>
 #include <encodingBase.h>
-#include<iostream>
+#include <iostream>
+#include <thrust/functional.h>
 
 
 template <int blockSize>
@@ -28,7 +29,7 @@ setupKernel1(int numElements, long *input)
 		unsigned int thread_data;
 
 		// Collectively compute the block-wide exclusive sum
-		BlockScan(temp_storage).ExclusiveScan(original_data, thread_data, aggregate, cuda::plus<>{}, aggregate);
+		BlockScan(temp_storage).ExclusiveScan(original_data, thread_data, aggregate, thrust::plus<unsigned int>(), aggregate);
 
 		// First thread of each warp writes in layer 1
 		if (((threadIdx.x & 31) == 0) && (elementId < numElements)) {
