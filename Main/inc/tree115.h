@@ -144,6 +144,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 					int testIndex = min(searchIndex + searchStep, layerSize - 1);
 					searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
 				}
+				searchIndex = min(searchIndex, layerSize - 1);
 				uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
 				
 				if (layerSum < bitsToFind) {
