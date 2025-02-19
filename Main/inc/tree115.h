@@ -131,8 +131,11 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				//	layerSum = static_cast<uint32_t>(layer[searchIndex]);
 				//}
 
+				int nextPowOf2 = 1;
+				while (nextPowOf2 < layerSize) nextPowOf2 *= 2;
+
 				int searchIndex = 0;
-				int searchStep = std::bit_ceil(layerSize);
+				int searchStep = nextPowOf2; //std::bit_ceil(layerSize);
 
 				while (searchStep > 1){
 					searchStep = searchStep / 2;
@@ -174,8 +177,11 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			//	layerSum = static_cast<uint32_t>(layer[searchIndex]);
 			//}
 
+			int nextPowOf2 = 1;
+			while (nextPowOf2 < layerSize) nextPowOf2 *= 2;
+
 			int searchIndex = 0;
-			int searchStep = std::bit_ceil(layerSize);
+			int searchStep = nextPowOf2; //std::bit_ceil(layerSize);
 
 			while (searchStep > 1){
 				searchStep = searchStep / 2;
