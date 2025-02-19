@@ -147,7 +147,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				int searchStep = nextPowOf2;
 
 				while (searchStep > 1){
-					searchStep = searchStep / 2;
+					searchStep >>= 1;
 					int testIndex = min(searchIndex + searchStep, layerSize - 1);
 					searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
 				}
@@ -202,7 +202,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			int searchStep = nextPowOf2; //std::bit_ceil(layerSize);
 
 			while (searchStep > 1){
-				searchStep = searchStep / 2;
+				searchStep >>= 1;
 				int testIndex = min(searchIndex + searchStep, layerSize - 1);
 				searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
 			}
