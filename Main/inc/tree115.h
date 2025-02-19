@@ -188,7 +188,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 			while (searchStep > 1){
 				searchStep = searchStep / 2;
 				searchIndex = (layerSum < bitsToFind) * (searchIndex + searchStep) + !(layerSum < bitsToFind) * (searchIndex - searchStep);
-				searchIndex = min(searchIndex : layerSize - 1);
+				searchIndex = min(searchIndex, layerSize - 1);
 				layerSum = static_cast<uint32_t>(layer[searchIndex]);
 			}
 			// After binary search we either landed on the correct value or the one above
