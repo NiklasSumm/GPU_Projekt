@@ -44,6 +44,7 @@ setupKernel88(int numElements, uint64_t *input)
 	}
 }
 
+template <int layer1Size, int layer2Size>
 __global__ void
 apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
 {
@@ -79,7 +80,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			nextLayerOffset *= 256;
+			nextLayerOffset *= (int)pow(2, layer2Size);
 		}
 
 		// Handle layer 1
@@ -111,7 +112,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			nextLayerOffset *= 4;
+			nextLayerOffset *= (int)pow(2, layer1Size - 6);;
 		}
 
 		// Handle virtual layer 0 (before bitmask)
@@ -212,7 +213,7 @@ class Tree88 : public EncodingBase {
 				ts.layerSizes[layer] = layerSize88<layer1Size,layer2Size>(layer, n);
 			}
 
-			apply88<<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
+			apply88<layer1Size, layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
 		};
 	
 		void print(uint64_t *h_bitmask) {
