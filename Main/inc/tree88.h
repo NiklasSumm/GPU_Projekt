@@ -6,7 +6,7 @@ template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
 setupKernel88(int numElements, uint64_t *input)
 {
-	int iterations = (pow(2, layer1Size - 6) * pow(2, layer2Size) + blockDim.x - 1) / blockDim.x;
+	int iterations = ((int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) + blockDim.x - 1) / blockDim.x;
 
 	unsigned int aggregateSum = 0;
 	unsigned int aggregate = 0;
@@ -30,7 +30,7 @@ setupKernel88(int numElements, uint64_t *input)
 
 		// Every fourth thread writes value in first layer
 		if ((threadIdx.x & (pow(2, layer1Size - 6) - 1) == 0) && (elementId < numElements)) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/pow(2, layer1Size - 6)] = static_cast<unsigned short>(thread_data + aggregateSum);
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(int)(pow(2, layer1Size - 6))] = static_cast<unsigned short>(thread_data + aggregateSum);
 		}
 
 		// Accumulate the aggregate for the next iteration of the loop 
@@ -148,10 +148,10 @@ int layerSize88(int layer, int bitmaskSize) {
 	int size = bitmaskSize * 2; // Bitmask size is size in long
 
 	if (layer == 1){
-		size = (bitmaskSize+ pow(2, layer1Size - 6) - 1) / pow(2, layer1Size - 6);
+		size = (bitmaskSize+ (int)pow(2, layer1Size - 6) - 1) / (int)pow(2, layer1Size - 6);
 	}
 	if (layer == 2){
-		size = (bitmaskSize+(pow(2, layer1Size - 6) * pow(2, layer2Size) - 1)) / (pow(2, layer1Size - 6) * pow(2, layer2Size));
+		size = (bitmaskSize+((int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) - 1)) / (int)(pow(2, layer1Size - 6) * pow(2, layer2Size));
 	}
 
 	return size;
