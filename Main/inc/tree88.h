@@ -94,6 +94,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 		
 		if (layerSize > 1) {
 			layerSize = min(layerSize, structure.layerSizes[1] - nextLayerOffset);
+            layerSize /= 2;
 			uint16_t *layer1 = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
 
             if (elementIdx == print_id){
