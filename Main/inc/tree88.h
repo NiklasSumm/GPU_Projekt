@@ -82,7 +82,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-            if (elementIdx == prind_id){
+            if (elementIdx == print_id){
                 printf("%i\n", searchIndex);
             }
 
@@ -118,7 +118,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-            if (elementIdx == prind_id){
+            if (elementIdx == print_id){
                 printf("%i\n", searchIndex);
             }
 			nextLayerOffset *= (int)pow(2, layer1Size - 6);;
