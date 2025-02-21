@@ -48,6 +48,8 @@ template <int layer1Size, int layer2Size>
 __global__ void
 apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
 {
+    int print_id = 64000;
+
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (elementIdx < numPacked) {
@@ -80,6 +82,10 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
+            if (elementIdx == prind_id){
+                printf("%i\n", searchIndex);
+            }
+
 			nextLayerOffset *= (int)pow(2, layer2Size);
 		}
 
@@ -112,6 +118,9 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
+            if (elementIdx == prind_id){
+                printf("%i\n", searchIndex);
+            }
 			nextLayerOffset *= (int)pow(2, layer1Size - 6);;
 		}
 
