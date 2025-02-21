@@ -94,7 +94,6 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 		
 		if (layerSize > 1) {
 			layerSize = min(layerSize, structure.layerSizes[1] - nextLayerOffset);
-            layerSize /= 2;
 			uint16_t *layer1 = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
 
             if (elementIdx == print_id){
@@ -234,7 +233,7 @@ class Tree88 : public EncodingBase {
 
 			setupKernel88<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
 
-            int offset = n*2 + ((n+(int)(pow(2, layer1Size - 6)) - 1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
+            int offset = ((n+3)/4 + 1)/2;//n*2 + ((n+(int)(pow(2, layer1Size - 6)) - 1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
             int size = gridSize; //(n+1023)/1024;
             uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
 
