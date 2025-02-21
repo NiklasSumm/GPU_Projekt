@@ -6,6 +6,8 @@ template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
 setupKernel88(int numElements, uint64_t *input)
 {
+    int print_id = 10;
+
 	int iterations = ((int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) + blockDim.x - 1) / blockDim.x;
 
 	unsigned int aggregateSum = 0;
@@ -17,7 +19,7 @@ setupKernel88(int numElements, uint64_t *input)
 	unsigned int elementId = 0;
 
 	for (int i = 0; i < iterations; i++) {
-		elementId = blockIdx.x * pow(2, layer1Size - 6) * pow(2, layer2Size) + i * blockDim.x + threadIdx.x;
+		elementId = blockIdx.x * (int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) + i * blockDim.x + threadIdx.x;
 
 		// Load 64 bit bitmask section and count bits
 		unsigned int original_data = 0;
