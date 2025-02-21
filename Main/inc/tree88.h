@@ -229,7 +229,7 @@ class Tree88 : public EncodingBase {
             }
 
             // Print first layer (short)
-            int offset = n*(int)(pow(2, layer1Size - 6)); // 4 shorts in one long
+            int offset = n*4; // 4 shorts in one long
             int size = (n + (int)(pow(2, layer1Size - 6)) - 1) / (int)(pow(2, layer1Size - 6));
             if (size < 500) {
                 std::cout << "layer 1: ";
