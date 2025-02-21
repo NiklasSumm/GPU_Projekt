@@ -151,6 +151,10 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			searchIndex = min(searchIndex, layerSize - 1);
 			uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 
+            if (elementIdx == print_id){
+                printf("%i %i\n", layerSum, bitsToFind);
+            }
+
 			if (layerSum < bitsToFind) {
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
