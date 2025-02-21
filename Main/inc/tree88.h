@@ -118,7 +118,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 		// Handle virtual layer 0 (before bitmask)
 		uint64_t bitmaskSection;
 		layerSize = structure.layerSizes[0]/2 - nextLayerOffset;
-		//layerSize = min(layerSize, 32);
+		layerSize = min(layerSize, 32);
 		uint64_t *bitLayer = &reinterpret_cast<uint64_t *>(structure.layers[0])[nextLayerOffset];
 		for (int i = 0; i < layerSize; i++) {
 			bitmaskSection = bitLayer[i];
@@ -183,7 +183,7 @@ class Tree88 : public EncodingBase {
 
 			setupKernel88<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
 
-            int offset = n*2 + ((n+7)/8 + 1)/2;
+            int offset = n*2 + ((n+(int)(pow(2, layer1Size - 6)) - 1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
             int size = gridSize; //(n+1023)/1024;
             uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
 
