@@ -99,6 +99,9 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
             if (elementIdx == print_id){
                 printf("%i\n", layerSize);
             }
+            if (elementIdx == print_id){
+                printf("%i\n", structure.layerSizes[2]);
+            }
 
 			// Index and step for binary search
 			//int searchIndex = layerSize / 2;
