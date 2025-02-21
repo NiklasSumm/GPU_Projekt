@@ -182,7 +182,7 @@ class Tree88 : public EncodingBase {
 
 			setupKernel88<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
 
-            int offset = n*2 + ((n+3)/4 + 1)/2;
+            int offset = n*2 + ((n+7)/8 + 1)/2;
             int size = gridSize; //(n+1023)/1024;
             uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
 
