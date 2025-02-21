@@ -31,7 +31,6 @@ setupKernel88(int numElements, uint64_t *input)
 		// Every fourth thread writes value in first layer
 		if (((threadIdx.x & ((int)pow(2, layer1Size - 6) - 1)) == 0) && (elementId < numElements)) {
 			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(int)(pow(2, layer1Size - 6))] = static_cast<unsigned short>(thread_data + aggregateSum);
-            printf("%i\n", thread_data + aggregateSum);
 		}
 
 		// Accumulate the aggregate for the next iteration of the loop 
@@ -49,8 +48,6 @@ template <int layer1Size, int layer2Size>
 __global__ void
 apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
 {
-    int print_id = 0;
-
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (elementIdx < numPacked) {
@@ -83,10 +80,6 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-            if (elementIdx == print_id){
-                printf("%i\n", searchIndex);
-            }
-
 			nextLayerOffset *= (int)pow(2, layer2Size);
 		}
 
@@ -96,13 +89,6 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 		if (layerSize > 1) {
 			layerSize = min(layerSize, structure.layerSizes[1] - nextLayerOffset);
 			uint16_t *layer1 = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
-
-            if (elementIdx == print_id){
-                printf("%i\n", layerSize);
-            }
-            if (elementIdx == print_id){
-                printf("%i\n", structure.layerSizes[2]);
-            }
 
 			// Index and step for binary search
 			int searchIndex = layerSize / 2;
@@ -126,50 +112,13 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-            //int nextPowOf2 = layerSize;
-			//	if (nextPowOf2 & (nextPowOf2 - 1)){
-			//		nextPowOf2 |= nextPowOf2 >> 1;
-    		//		nextPowOf2 |= nextPowOf2 >> 2;
-    		//		nextPowOf2 |= nextPowOf2 >> 4;
-    		//		nextPowOf2 |= nextPowOf2 >> 8;
-    		//		nextPowOf2 |= nextPowOf2 >> 16;
-//
-			//		nextPowOf2 = (nextPowOf2 ^ (nextPowOf2 << 1)) - 1;
-			//	}
-//
-			//	int searchIndex = 0;
-			//int searchStep = nextPowOf2; //cuda::std::bit_ceil<int>(layerSize);
-//
-			//while (searchStep > 1){
-			//	searchStep >>= 1;
-			//	int testIndex = min(searchIndex + searchStep, layerSize - 1);
-			//	searchIndex += (static_cast<uint32_t>(layer1[testIndex]) < bitsToFind) * searchStep;
-//
-            //    if (elementIdx == print_id){
-            //        printf("%i %i %i\n", searchIndex, searchStep, static_cast<uint32_t>(layer1[testIndex]));
-            //    }
-			//}
-			//searchIndex = min(searchIndex, layerSize - 1);
-			//uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
-//
-            //if (elementIdx == print_id){
-            //    printf("%i %i\n", layerSum, bitsToFind);
-            //}
-//
-			//if (layerSum < bitsToFind) {
-			//	bitsToFind -= layerSum;
-			//	nextLayerOffset += searchIndex;
-			//}
-            //if (elementIdx == print_id){
-            //    printf("%i\n", searchIndex);
-            //}
 			nextLayerOffset *= (int)pow(2, layer1Size - 6);;
 		}
 
 		// Handle virtual layer 0 (before bitmask)
 		uint64_t bitmaskSection;
 		layerSize = structure.layerSizes[0]/2 - nextLayerOffset;
-		layerSize = min(layerSize, 32);
+		//layerSize = min(layerSize, 32);
 		uint64_t *bitLayer = &reinterpret_cast<uint64_t *>(structure.layers[0])[nextLayerOffset];
 		for (int i = 0; i < layerSize; i++) {
 			bitmaskSection = bitLayer[i];
@@ -234,9 +183,7 @@ class Tree88 : public EncodingBase {
 
 			setupKernel88<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
 
-            printf("%i\n", gridSize);
-
-            int offset = ((n+3)/4 + 1)/2;//n*2 + ((n+(int)(pow(2, layer1Size - 6)) - 1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
+            int offset = n*2 + ((n+3)/4 + 1)/2;
             int size = gridSize; //(n+1023)/1024;
             uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
 
