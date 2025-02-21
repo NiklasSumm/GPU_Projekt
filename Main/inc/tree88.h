@@ -105,64 +105,64 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
             }
 
 			// Index and step for binary search
-			//int searchIndex = layerSize / 2;
-			//int searchStep = (layerSize + 1) / 2;
-//
-			//uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
-//
-			//while (searchStep > 1){
-			//	searchStep = (searchStep + 1) / 2;
-			//	searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
-			//	searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
-			//	layerSum = static_cast<uint32_t>(layer1[searchIndex]);
-			//}
-			//// After binary search we either landed on the correct value or the one above
-			//// So we have to check if the result is correct and if not go to the value below
-			//if ((layerSum >= bitsToFind) && (searchIndex > 0)){
-			//	searchIndex--;
-			//	layerSum = static_cast<uint32_t>(layer1[searchIndex]);
-			//}
-			//if (layerSum < bitsToFind) {
-			//	bitsToFind -= layerSum;
-			//	nextLayerOffset += searchIndex;
-			//}
-            int nextPowOf2 = layerSize;
-				if (nextPowOf2 & (nextPowOf2 - 1)){
-					nextPowOf2 |= nextPowOf2 >> 1;
-    				nextPowOf2 |= nextPowOf2 >> 2;
-    				nextPowOf2 |= nextPowOf2 >> 4;
-    				nextPowOf2 |= nextPowOf2 >> 8;
-    				nextPowOf2 |= nextPowOf2 >> 16;
+			int searchIndex = layerSize / 2;
+			int searchStep = (layerSize + 1) / 2;
 
-					nextPowOf2 = (nextPowOf2 ^ (nextPowOf2 << 1)) - 1;
-				}
-
-				int searchIndex = 0;
-			int searchStep = nextPowOf2; //cuda::std::bit_ceil<int>(layerSize);
-
-			while (searchStep > 1){
-				searchStep >>= 1;
-				int testIndex = min(searchIndex + searchStep, layerSize - 1);
-				searchIndex += (static_cast<uint32_t>(layer1[testIndex]) < bitsToFind) * searchStep;
-
-                if (elementIdx == print_id){
-                    printf("%i %i %i\n", searchIndex, searchStep, static_cast<uint32_t>(layer1[testIndex]));
-                }
-			}
-			searchIndex = min(searchIndex, layerSize - 1);
 			uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 
-            if (elementIdx == print_id){
-                printf("%i %i\n", layerSum, bitsToFind);
-            }
-
+			while (searchStep > 1){
+				searchStep = (searchStep + 1) / 2;
+				searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
+				searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
+				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
+			}
+			// After binary search we either landed on the correct value or the one above
+			// So we have to check if the result is correct and if not go to the value below
+			if ((layerSum >= bitsToFind) && (searchIndex > 0)){
+				searchIndex--;
+				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
+			}
 			if (layerSum < bitsToFind) {
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-            if (elementIdx == print_id){
-                printf("%i\n", searchIndex);
-            }
+            //int nextPowOf2 = layerSize;
+			//	if (nextPowOf2 & (nextPowOf2 - 1)){
+			//		nextPowOf2 |= nextPowOf2 >> 1;
+    		//		nextPowOf2 |= nextPowOf2 >> 2;
+    		//		nextPowOf2 |= nextPowOf2 >> 4;
+    		//		nextPowOf2 |= nextPowOf2 >> 8;
+    		//		nextPowOf2 |= nextPowOf2 >> 16;
+//
+			//		nextPowOf2 = (nextPowOf2 ^ (nextPowOf2 << 1)) - 1;
+			//	}
+//
+			//	int searchIndex = 0;
+			//int searchStep = nextPowOf2; //cuda::std::bit_ceil<int>(layerSize);
+//
+			//while (searchStep > 1){
+			//	searchStep >>= 1;
+			//	int testIndex = min(searchIndex + searchStep, layerSize - 1);
+			//	searchIndex += (static_cast<uint32_t>(layer1[testIndex]) < bitsToFind) * searchStep;
+//
+            //    if (elementIdx == print_id){
+            //        printf("%i %i %i\n", searchIndex, searchStep, static_cast<uint32_t>(layer1[testIndex]));
+            //    }
+			//}
+			//searchIndex = min(searchIndex, layerSize - 1);
+			//uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
+//
+            //if (elementIdx == print_id){
+            //    printf("%i %i\n", layerSum, bitsToFind);
+            //}
+//
+			//if (layerSum < bitsToFind) {
+			//	bitsToFind -= layerSum;
+			//	nextLayerOffset += searchIndex;
+			//}
+            //if (elementIdx == print_id){
+            //    printf("%i\n", searchIndex);
+            //}
 			nextLayerOffset *= (int)pow(2, layer1Size - 6);;
 		}
 
@@ -236,20 +236,20 @@ class Tree88 : public EncodingBase {
 
             printf("%i\n", gridSize);
 
-            //int offset = ((n+3)/4 + 1)/2;//n*2 + ((n+(int)(pow(2, layer1Size - 6)) - 1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
-            //int size = gridSize; //(n+1023)/1024;
-            //uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
-//
-            //// Determine temporary device storage requirements
-            //void *d_temp_storage = nullptr;
-            //size_t temp_storage_bytes = 0;
-            //cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
-//
-            //// Allocate temporary storage
-            //cudaMalloc(&d_temp_storage, temp_storage_bytes);
-//
-            //// Run exclusive prefix sum
-            //cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
+            int offset = ((n+3)/4 + 1)/2;//n*2 + ((n+(int)(pow(2, layer1Size - 6)) - 1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
+            int size = gridSize; //(n+1023)/1024;
+            uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
+
+            // Determine temporary device storage requirements
+            void *d_temp_storage = nullptr;
+            size_t temp_storage_bytes = 0;
+            cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
+
+            // Allocate temporary storage
+            cudaMalloc(&d_temp_storage, temp_storage_bytes);
+
+            // Run exclusive prefix sum
+            cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
 
 			this->d_bitmask = d_bitmask;
 			this->n = n;
