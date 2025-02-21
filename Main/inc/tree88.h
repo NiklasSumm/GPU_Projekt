@@ -130,20 +130,20 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				}
 
 				int searchIndex = 0;
-				int searchStep = nextPowOf2;
+			int searchStep = nextPowOf2; //cuda::std::bit_ceil<int>(layerSize);
 
-				while (searchStep > 1){
-					searchStep >>= 1;
-					int testIndex = min(searchIndex + searchStep, layerSize - 1);
-					searchIndex += (static_cast<uint32_t>(layer1[testIndex]) < bitsToFind) * searchStep;
-				}
-				searchIndex = min(searchIndex, layerSize - 1);
-				uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
-				
-				if (layerSum < bitsToFind) {
-					bitsToFind -= layerSum;
-					nextLayerOffset += searchIndex;
-				}
+			while (searchStep > 1){
+				searchStep >>= 1;
+				int testIndex = min(searchIndex + searchStep, layerSize - 1);
+				searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
+			}
+			searchIndex = min(searchIndex, layerSize - 1);
+			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
+
+			if (layerSum < bitsToFind) {
+				bitsToFind -= layerSum;
+				nextLayerOffset += searchIndex;
+			}
             if (elementIdx == print_id){
                 printf("%i\n", searchIndex);
             }
