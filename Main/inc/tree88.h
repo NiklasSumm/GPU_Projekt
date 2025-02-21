@@ -45,7 +45,7 @@ setupKernel88(int numElements, uint64_t *input)
         }
 
 		// Every fourth thread writes value in first layer
-		if ((threadIdx.x & ((int)pow(2, layer1Size - 6) - 1) == 0) && (elementId < numElements)) {
+		if (((threadIdx.x & ((int)pow(2, layer1Size - 6) - 1)) == 0) && (elementId < numElements)) {
 			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(int)(pow(2, layer1Size - 6))] = static_cast<unsigned short>(thread_data + aggregateSum);
             printf("%i ", threadIdx.x);
 		}
