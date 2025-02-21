@@ -236,20 +236,20 @@ class Tree88 : public EncodingBase {
 
             printf("%i\n", gridSize);
 
-            int offset = ((n+3)/4 + 1)/2;//n*2 + ((n+(int)(pow(2, layer1Size - 6)) - 1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
-            int size = gridSize; //(n+1023)/1024;
-            uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
-
-            // Determine temporary device storage requirements
-            void *d_temp_storage = nullptr;
-            size_t temp_storage_bytes = 0;
-            cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
-
-            // Allocate temporary storage
-            cudaMalloc(&d_temp_storage, temp_storage_bytes);
-
-            // Run exclusive prefix sum
-            cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
+            //int offset = ((n+3)/4 + 1)/2;//n*2 + ((n+(int)(pow(2, layer1Size - 6)) - 1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
+            //int size = gridSize; //(n+1023)/1024;
+            //uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
+//
+            //// Determine temporary device storage requirements
+            //void *d_temp_storage = nullptr;
+            //size_t temp_storage_bytes = 0;
+            //cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
+//
+            //// Allocate temporary storage
+            //cudaMalloc(&d_temp_storage, temp_storage_bytes);
+//
+            //// Run exclusive prefix sum
+            //cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
 
 			this->d_bitmask = d_bitmask;
 			this->n = n;
