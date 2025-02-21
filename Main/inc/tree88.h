@@ -48,7 +48,7 @@ template <int layer1Size, int layer2Size>
 __global__ void
 apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
 {
-    int print_id = 64000;
+    int print_id = 0;
 
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -142,7 +142,7 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				searchIndex += (static_cast<uint32_t>(layer1[testIndex]) < bitsToFind) * searchStep;
 
                 if (elementIdx == print_id){
-                    printf("%i %i\n", searchIndex, searchStep);
+                    printf("%i %i %i\n", searchIndex, searchStep, static_cast<uint32_t>(layer1[testIndex]));
                 }
 			}
 			searchIndex = min(searchIndex, layerSize - 1);
