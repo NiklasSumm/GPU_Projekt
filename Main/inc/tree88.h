@@ -10,6 +10,10 @@ setupKernel88(int numElements, uint64_t *input)
 
 	int iterations = ((int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) + blockDim.x - 1) / blockDim.x;
 
+    if (threadIdx.x == print_id){
+        printf("%i ", iterations);
+    }
+
 	unsigned int aggregateSum = 0;
 	unsigned int aggregate = 0;
 
@@ -29,6 +33,13 @@ setupKernel88(int numElements, uint64_t *input)
 
 		// Collectively compute the block-wide inclusive sum
 		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
+
+        if (threadIdx.x == print_id){
+            printf("%i ", thread_data);
+        }
+        if (threadIdx.x == print_id){
+            printf("%i ", numElements*4+elementId/(int)(pow(2, layer1Size - 6)));
+        }
 
 		// Every fourth thread writes value in first layer
 		if ((threadIdx.x & ((int)pow(2, layer1Size - 6) - 1) == 0) && (elementId < numElements)) {
