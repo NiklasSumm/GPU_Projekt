@@ -40,6 +40,9 @@ setupKernel88(int numElements, uint64_t *input)
         if (threadIdx.x == print_id){
             printf("%i ", numElements*4+elementId/(int)(pow(2, layer1Size - 6)));
         }
+        if (threadIdx.x == print_id){
+            printf("%i ", numElements*4+elementId/4);
+        }
 
 		// Every fourth thread writes value in first layer
 		if ((threadIdx.x & ((int)pow(2, layer1Size - 6) - 1) == 0) && (elementId < numElements)) {
