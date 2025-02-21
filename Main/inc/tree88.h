@@ -2,11 +2,11 @@
 
 #include <encodingBase.h>
 
-template <int blockSize>
+template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
 setupKernel88(int numElements, uint64_t *input)
 {
-	int iterations = (1023 + blockDim.x) / blockDim.x;
+	int iterations = (pow(2, layer1Size - 6) * pow(2, layer2Size) + blockDim.x - 1) / blockDim.x;
 
 	unsigned int aggregateSum = 0;
 	unsigned int aggregate = 0;
@@ -17,7 +17,7 @@ setupKernel88(int numElements, uint64_t *input)
 	unsigned int elementId = 0;
 
 	for (int i = 0; i < iterations; i++) {
-		elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
+		elementId = blockIdx.x * pow(2, layer1Size - 6) * pow(2, layer2Size) + i * blockDim.x + threadIdx.x;
 
 		// Load 64 bit bitmask section and count bits
 		unsigned int original_data = 0;
@@ -29,8 +29,8 @@ setupKernel88(int numElements, uint64_t *input)
 		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
 
 		// Every fourth thread writes value in first layer
-		if (((threadIdx.x & 3) == 0) && (elementId < numElements)) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/4] = static_cast<unsigned short>(thread_data + aggregateSum);
+		if (((threadIdx.x & (pow(2, layer1Size - 6) - 1) == 0) && (elementId < numElements)) {
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/pow(2, layer1Size - 6)] = static_cast<unsigned short>(thread_data + aggregateSum);
 		}
 
 		// Accumulate the aggregate for the next iteration of the loop 
@@ -143,25 +143,27 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 
 // layerSize calculates the amount of elements per layer, regardless of the actual size on disk.
 // For the bitmask, we return the amount of integers.
+template <int layer1Size, int layer2Size>
 int layerSize88(int layer, int bitmaskSize) {
 	int size = bitmaskSize * 2; // Bitmask size is size in long
 
 	if (layer == 1){
-		size = (bitmaskSize+3)/4;
+		size = (bitmaskSize+ pow(2, layer1Size - 6) - 1) / pow(2, layer1Size - 6);
 	}
 	if (layer == 2){
-		size = (bitmaskSize+1023)/1024;
+		size = (bitmaskSize+(pow(2, layer1Size - 6) * pow(2, layer2Size) - 1)) / (pow(2, layer1Size - 6) * pow(2, layer2Size));
 	}
 
 	return size;
 }
 
+template <int layer1Size, int layer2Size>
 int layerOffsetInt88(int layer, int bitmaskSize) {
 	if (layer == 0) return 0;
 
 	int offset = 0;
 	for (int i = 0; i < layer; i++) {
-		int size = layerSize88(i, bitmaskSize);
+		int size = layerSize88<layer1Size, layer2Size>(i, bitmaskSize);
 		if (i == 1) size = (size+1)/2;
 		offset += size;
 	}
@@ -176,7 +178,7 @@ class Tree88 : public EncodingBase {
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
-			setupKernel88<blockSize><<<(n+1023)/1024, blockSize>>>(n, d_bitmask);
+			setupKernel88<blockSize,8,8><<<(n+1023)/1024, blockSize>>>(n, d_bitmask);
 
             int offset = n*2 + ((n+3)/4 + 1)/2;
             int size = (n+1023)/1024;
@@ -204,8 +206,8 @@ class Tree88 : public EncodingBase {
 
 			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
 			for (int layer = 0; layer < 3; layer++) {
-				ts.layers[layer] = &d_bitmask_int[layerOffsetInt88(layer, n)];
-				ts.layerSizes[layer] = layerSize88(layer, n);
+				ts.layers[layer] = &d_bitmask_int[layerOffsetInt88<8,8>(layer, n)];
+				ts.layerSizes[layer] = layerSize88<8,8>(layer, n);
 			}
 
 			apply88<<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
