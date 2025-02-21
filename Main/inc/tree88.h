@@ -29,7 +29,7 @@ setupKernel88(int numElements, uint64_t *input)
 		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
 
 		// Every fourth thread writes value in first layer
-		if (((threadIdx.x & (pow(2, layer1Size - 6) - 1) == 0) && (elementId < numElements)) {
+		if ((threadIdx.x & (pow(2, layer1Size - 6) - 1) == 0) && (elementId < numElements)) {
 			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/pow(2, layer1Size - 6)] = static_cast<unsigned short>(thread_data + aggregateSum);
 		}
 
