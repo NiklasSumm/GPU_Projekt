@@ -35,18 +35,19 @@ setupKernel88(int numElements, uint64_t *input)
 		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
 
         if (threadIdx.x == print_id){
-            printf("%i ", thread_data);
+            printf("\n%i ", thread_data + aggregateSum);
         }
         if (threadIdx.x == print_id){
             printf("%i ", numElements*4+elementId/(int)(pow(2, layer1Size - 6)));
         }
         if (threadIdx.x == print_id){
-            printf("%i ", numElements*4+elementId/4);
+            printf("%i\n", numElements*4+elementId/4);
         }
 
 		// Every fourth thread writes value in first layer
 		if ((threadIdx.x & ((int)pow(2, layer1Size - 6) - 1) == 0) && (elementId < numElements)) {
 			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(int)(pow(2, layer1Size - 6))] = static_cast<unsigned short>(thread_data + aggregateSum);
+            printf("%i ", threadIdx.x);
 		}
 
 		// Accumulate the aggregate for the next iteration of the loop 
