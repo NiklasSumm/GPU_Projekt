@@ -6,7 +6,7 @@ template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
 setupKernel88(int numElements, uint64_t *input)
 {
-	int iterations = ((int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) + blockDim.x - 1) / blockDim.x;
+	int iterations = (((1 << (layer1Size - 6)) * (1 << layer2Size)) + blockDim.x - 1) / blockDim.x;
 
 	unsigned int aggregateSum = 0;
 	unsigned int aggregate = 0;
@@ -17,7 +17,7 @@ setupKernel88(int numElements, uint64_t *input)
 	unsigned int elementId = 0;
 
 	for (int i = 0; i < iterations; i++) {
-		elementId = blockIdx.x * (int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) + i * blockDim.x + threadIdx.x;
+		elementId = blockIdx.x * ((1 << (layer1Size - 6)) * (1 << layer2Size)) + i * blockDim.x + threadIdx.x;
 
 		// Load 64 bit bitmask section and count bits
 		unsigned int original_data = 0;
@@ -29,8 +29,8 @@ setupKernel88(int numElements, uint64_t *input)
 		BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
 
 		// Every fourth thread writes value in first layer
-		if (((threadIdx.x & ((int)pow(2, layer1Size - 6) - 1)) == 0) && (elementId < numElements)) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(int)(pow(2, layer1Size - 6))] = static_cast<unsigned short>(thread_data + aggregateSum);
+		if (((threadIdx.x & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/((1 << (layer1Size - 6)))] = static_cast<unsigned short>(thread_data + aggregateSum);
 		}
 
 		// Accumulate the aggregate for the next iteration of the loop 
@@ -39,7 +39,7 @@ setupKernel88(int numElements, uint64_t *input)
 
 	// Last thread of each full block writes into layer 2
 	if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
-		int offset = numElements*2 + ((numElements+(int)(pow(2, layer1Size - 6))-1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
+		int offset = numElements*2 + ((numElements+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
 		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
 	}
 }
@@ -80,7 +80,7 @@ apply88(int numPacked, int *dst, int *src, int bitmaskSize, TreeStructure struct
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			nextLayerOffset *= (int)pow(2, layer2Size);
+			nextLayerOffset *= (1 << layer2Size);
 		}
 
 		// Handle layer 1
@@ -112,7 +112,7 @@ apply88(int numPacked, int *dst, int *src, int bitmaskSize, TreeStructure struct
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			nextLayerOffset *= (int)pow(2, layer1Size - 6);;
+			nextLayerOffset *= (1 << (layer1Size - 6));;
 		}
 
 		// Handle virtual layer 0 (before bitmask)
@@ -158,10 +158,10 @@ int layerSize88(int layer, int bitmaskSize) {
 	int size = bitmaskSize * 2; // Bitmask size is size in long
 
 	if (layer == 1){
-		size = (bitmaskSize+ (int)pow(2, layer1Size - 6) - 1) / (int)pow(2, layer1Size - 6);
+		size = (bitmaskSize+ (1 << (layer1Size - 6)) - 1) / (1 << (layer1Size - 6));
 	}
 	if (layer == 2){
-		size = (bitmaskSize+((int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) - 1)) / (int)(pow(2, layer1Size - 6) * pow(2, layer2Size));
+		size = (bitmaskSize+((1 << (layer1Size - 6)) * (1 << layer2Size) - 1)) / ((1 << (layer1Size - 6)) * (1 << layer2Size));
 	}
 
 	return size;
@@ -188,13 +188,12 @@ class Tree88 : public EncodingBase {
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
-            int gridSize = (n + (int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) - 1) / (int)(pow(2, layer1Size - 6) * pow(2, layer2Size));
+            int gridSize = (n + ((1 << (layer1Size - 6)) * (1 << layer2Size)) - 1) / ((1 << (layer1Size - 6)) * (1 << layer2Size));
 
 			setupKernel88<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
 
-            //int offset = n*2 + ((n+3)/4 + 1)/2;
-	        int offset = n*2 + ((n+(int)(pow(2, layer1Size - 6))-1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
-            int size = gridSize; //(n+1023)/1024;
+	        int offset = n*2 + ((n+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
+            int size = gridSize;
             uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
 
             // Determine temporary device storage requirements
@@ -263,7 +262,7 @@ class Tree88 : public EncodingBase {
 
             // Print first layer (short)
             int offset = n*4; // 4 shorts in one long
-            int size = (n + (int)(pow(2, layer1Size - 6)) - 1) / (int)(pow(2, layer1Size - 6));
+            int size = (n + (1 << (layer1Size - 6)) - 1) / (1 << (layer1Size - 6));
             if (size < 500) {
                 std::cout << "layer 1: ";
                 for (int i = offset; i < offset+size; i++) {
@@ -274,7 +273,7 @@ class Tree88 : public EncodingBase {
 
             // Print second layer layer (int)
             offset = offset / 2 + (size+1) / 2;
-            size = (n + (int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) - 1) / (int)(pow(2, layer1Size - 6) * pow(2, layer2Size));
+            size = (n + ((1 << (layer1Size - 6)) * (1 << (layer2Size))) - 1) / ((1 << (layer1Size - 6)) * (1 << (layer2Size)));
             if (size < 500) {
                 std::cout << "layer 2: ";
                 for (int i = offset; i < offset+size; i++) {
