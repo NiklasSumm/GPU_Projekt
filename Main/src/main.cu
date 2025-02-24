@@ -25,15 +25,11 @@
 #include <curand.h>
 #include <curand_kernel.h>
 
-#include <thrust/scan.h>
-#include <thrust/execution_policy.h>
-
 #include <encodingBase.h>
 
 #include <tree115.h>
 #include <tree78.h>
 #include <tree88.h>
-#include <baseline.h>
 
 const static int DEFAULT_NUM_ELEMENTS = 10;
 
@@ -150,7 +146,6 @@ int main(int argc, char *argv[])
 	Tree115<1024> tree115solo = Tree115<1024>(false);
 	Tree78<512> tree78 = Tree78<512>{};
 	Tree88<1024> tree88 = Tree88<1024>{};
-	ThrustBaseline baseline = ThrustBaseline{};
 
 	// Select implementation based on command line parameters
 	EncodingBase* implementation;
@@ -162,8 +157,6 @@ int main(int argc, char *argv[])
 		implementation = &tree78;
 	} else if (chCommandLineGetBool("88", argc, argv)) {
 		implementation = &tree88;
-	} else if (chCommandLineGetBool("baseline", argc, argv)) {
-		implementation = &baseline;
 	} else {
 		exit(1);
 	}
