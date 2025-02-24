@@ -30,7 +30,7 @@ setupKernel78(int numElements, uint64_t *input)
 		// Every second thread writes value in first layer
 		if ((((threadIdx.x + 1) & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
 			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(1 << (layer1Size - 6))] = static_cast<unsigned short>(thread_data + aggregateSum);
-			printf("%i - %i", threadIdx.x, thread_data + aggregateSum);
+			//printf("%i - %i", threadIdx.x, thread_data + aggregateSum);
 		}
 
 		// Accumulate the aggregate for the next iteration of the loop 
