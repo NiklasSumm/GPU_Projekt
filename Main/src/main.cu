@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
 	Tree115<1024> tree115 = Tree115<1024>();
 	//Tree115<1024> tree115solo = Tree115<1024>(false);
 	Tree78<512,7,8> tree78 = Tree78<512,7,8>{};
-	Tree88<256,12,4> tree88 = Tree88<256,12,4>{};
+	Tree88<256,8,5> tree88 = Tree88<256,8,5>{};
 
 	// Select implementation based on command line parameters
 	EncodingBase* implementation;
