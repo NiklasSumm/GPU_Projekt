@@ -1,5 +1,7 @@
 #include <cub/cub.cuh>
 #include <cuda/std/bit>
+#include <cuda/std/cstdint>
+#include <cuda/std/cstdio>
 #include <encodingBase.h>
 #include <iostream>
 #include <thrust/functional.h>
