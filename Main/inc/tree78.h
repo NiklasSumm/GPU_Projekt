@@ -2,11 +2,11 @@
 
 #include <encodingBase.h>
 
-template <int blockSize>
+template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
 setupKernel78(int numElements, uint64_t *input)
 {	
-	int iterations = (511 + blockDim.x) / blockDim.x;
+	int iterations = ((int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) + blockDim.x - 1) / blockDim.x;
 
 	unsigned int aggregateSum = 0;
 	unsigned int aggregate = 0;
@@ -17,7 +17,7 @@ setupKernel78(int numElements, uint64_t *input)
 	unsigned int elementId = 0;
 
 	for (int i = 0; i < iterations; i++) {
-		elementId = blockIdx.x * 512 + i * blockDim.x + threadIdx.x;
+		elementId = blockIdx.x * (int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) + i * blockDim.x + threadIdx.x;
 
 		// Load 64 bit bitmask section and count bits
 		unsigned int thread_data = 0;
@@ -28,8 +28,8 @@ setupKernel78(int numElements, uint64_t *input)
 		BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, aggregate);
 
 		// Every second thread writes value in first layer
-		if (((threadIdx.x+1 & 1) == 0) && (elementId < numElements)) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/2] = static_cast<unsigned short>(thread_data + aggregateSum);
+		if (((threadIdx.x & ((int)pow(2, layer1Size - 6) - 1)) == 0) && (elementId < numElements)) {
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(int)(pow(2, layer1Size - 6))] = static_cast<unsigned short>(thread_data + aggregateSum);
 		}
 
 		// Accumulate the aggregate for the next iteration of the loop 
@@ -38,11 +38,12 @@ setupKernel78(int numElements, uint64_t *input)
 
 	// Last thread of each full block writes into layer 2
 	if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
-		int offset = numElements*2 + ((numElements+1)/2 + 1)/2;
+		int offset = numElements*2 + ((numElements+(int)(pow(2, layer1Size - 6))-1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
 		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
 	}
 }
 
+template <int layer1Size, int layer2Size>
 __global__ void
 apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
 {	
@@ -79,7 +80,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= (layerSum - static_cast<uint32_t>(layer2[0]));
 				nextLayerOffset += searchIndex;
 			}
-			nextLayerOffset *= 256;
+			nextLayerOffset *= (int)pow(2, layer2Size);
 		}
 
 		// Handle layer 1
@@ -109,7 +110,7 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				bitsToFind -= (layerSum - static_cast<uint32_t>(layer1[0]));;
 				nextLayerOffset += searchIndex;
 			}
-			nextLayerOffset *= 2;
+			nextLayerOffset *= (int)pow(2, layer1Size - 6);;
 		}
 
 		// Handle virtual layer 0 (before bitmask)
@@ -140,25 +141,27 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 
 // layerSize calculates the amount of elements per layer, regardless of the actual size on disk.
 // For the bitmask, we return the amount of integers.
+template <int layer1Size, int layer2Size>
 int layerSize78(int layer, int bitmaskSize) {
 	int size = bitmaskSize * 2; // Bitmask size is size in long
 
 	if (layer == 1){
-		size = (bitmaskSize+1)/2;
+		size = (bitmaskSize+ (int)pow(2, layer1Size - 6) - 1) / (int)pow(2, layer1Size - 6);
 	}
 	if (layer == 2){
-		size = (bitmaskSize+511)/512;
+		size = (bitmaskSize+((int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) - 1)) / (int)(pow(2, layer1Size - 6) * pow(2, layer2Size));
 	}
 
 	return size;
 }
 
+template <int layer1Size, int layer2Size>
 int layerOffsetInt78(int layer, int bitmaskSize) {
 	if (layer == 0) return 0;
 
 	int offset = 0;
 	for (int i = 0; i < layer; i++) {
-		int size = layerSize78(i, bitmaskSize);
+		int size = layerSize78<layer1Size,layer2Size>(i, bitmaskSize);
 		if (i == 1) size = (size+1)/2;
 		offset += size;
 	}
@@ -173,10 +176,15 @@ class Tree78 : public EncodingBase {
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
-			setupKernel78<blockSize><<<(n+511)/512, blockSize>>>(n, d_bitmask);
+			int gridSize = (n + (int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) - 1) / (int)(pow(2, layer1Size - 6) * pow(2, layer2Size));
 
-			int offset = n*2 + ((n+1)/2 + 1)/2;
-			int size = (n+511)/512;
+			//setupKernel78<blockSize><<<(n+511)/512, blockSize>>>(n, d_bitmask);
+			setupKernel78<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
+
+			//int offset = n*2 + ((n+1)/2 + 1)/2;
+			//int size = (n+511)/512;
+	        int offset = n*2 + ((n+(int)(pow(2, layer1Size - 6))-1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
+            int size = gridSize;
 			unsigned int *startPtr = &reinterpret_cast<unsigned int*>(d_bitmask)[offset];
 
 			// Determine temporary device storage requirements
@@ -201,11 +209,11 @@ class Tree78 : public EncodingBase {
 
 			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
 			for (int layer = 0; layer < 3; layer++) {
-				ts.layers[layer] = &d_bitmask_int[layerOffsetInt78(layer, n)];
-				ts.layerSizes[layer] = layerSize78(layer, n);
+				ts.layers[layer] = &d_bitmask_int[layerOffsetInt78<layer1Size,layer2Size>(layer, n)];
+				ts.layerSizes[layer] = layerSize78<layer1Size,layer2Size>(layer, n);
 			}
 
-			apply78<<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
+			apply78<layer1Size,layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
 		};
 	
 		void print(uint64_t *h_bitmask) {
@@ -223,7 +231,7 @@ class Tree78 : public EncodingBase {
 
 			// Print first layer (short)
 			int offset = n*4; // 4 shorts in one long
-			int size = (n+1)/2;
+			int size = (n + (int)(pow(2, layer1Size - 6)) - 1) / (int)(pow(2, layer1Size - 6));
 			if (size < 500) {
 				std::cout << "layer 1: ";
 				for (int i = offset; i < offset+size; i++) {
@@ -234,7 +242,7 @@ class Tree78 : public EncodingBase {
 
 			// Print second layer layer (int)
 			offset = offset / 2 + (size+1) / 2;
-			size = (n+511) / 512;
+			size = (n + (int)(pow(2, layer1Size - 6) * pow(2, layer2Size)) - 1) / (int)(pow(2, layer1Size - 6) * pow(2, layer2Size));
 			if (size < 500) {
 				std::cout << "layer 2: ";
 				for (int i = offset; i < offset+size; i++) {
