@@ -49,6 +49,7 @@ setupKernel78(int numElements, uint64_t *input)
 
 		// Collectively compute the block-wide inclusive sum
 		BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, prefix_op);
+		__syncthreads();
 
 		// Every second thread writes value in first layer
 		if ((((threadIdx.x + 1) & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
