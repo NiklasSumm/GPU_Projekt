@@ -45,7 +45,7 @@ setupKernel78(int numElements, uint64_t *input)
 
 template <int layer1Size, int layer2Size>
 __global__ void
-apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
+apply78(int numPacked, int *dst, int *src, int bitmaskSize, TreeStructure structure, bool unpack)
 {	
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -77,7 +77,8 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 			}
 			
 			if (layerSum >= bitsToFind) {
-				bitsToFind -= (layerSum - static_cast<uint32_t>(layer2[0]));
+				uint32_t previousLayerSum = searchIndex > 0 ? static_cast<uint32_t>(layer2[searchIndex-1]) : 0;
+				bitsToFind -= previousLayerSum;
 				nextLayerOffset += searchIndex;
 			}
 			nextLayerOffset *= (int)pow(2, layer2Size);
@@ -107,7 +108,8 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 			}
 			if (layerSum >= bitsToFind) {
-				bitsToFind -= (layerSum - static_cast<uint32_t>(layer1[0]));;
+				uint32_t previousLayerSum = searchIndex > 0 ? static_cast<uint32_t>(layer1[searchIndex-1]) : 0;
+				bitsToFind -= previousLayerSum;
 				nextLayerOffset += searchIndex;
 			}
 			nextLayerOffset *= (int)pow(2, layer1Size - 6);;
@@ -135,7 +137,15 @@ apply78(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				}
 			}
 		}
-		permutation[elementIdx] = expandedIndex;
+		if (src) {
+			if (unpack) {
+				dst[expandedIndex] = src[elementIdx]; // Unpack: Load from packed, write to expanded
+			} else {
+				dst[elementIdx] = src[expandedIndex]; // Pack: Load from expanded, write to packed
+			}
+		} else {
+			dst[elementIdx] = expandedIndex; // Write permutation (used in apply)
+		}
 	}
 }
 
@@ -173,6 +183,19 @@ class Tree78 : public EncodingBase {
 	private:
 		uint64_t *d_bitmask;
 		int n;
+
+	void applyImplementation(int *dst, int *src, int packedSize, bool unpack) {
+		TreeStructure ts;
+
+		uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
+		for (int layer = 0; layer < 3; layer++) {
+			ts.layers[layer] = &d_bitmask_int[layerOffsetInt78<layer1Size,layer2Size>(layer, n)];
+			ts.layerSizes[layer] = layerSize78<layer1Size,layer2Size>(layer, n);
+		}
+
+		apply78<layer1Size,layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, dst, src, n, ts, unpack);
+	}
+
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
@@ -203,18 +226,16 @@ class Tree78 : public EncodingBase {
 		};
 
 		void apply(int *permutation, int packedSize) {
-			// TODO
-
-			TreeStructure ts;
-
-			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
-			for (int layer = 0; layer < 3; layer++) {
-				ts.layers[layer] = &d_bitmask_int[layerOffsetInt78<layer1Size,layer2Size>(layer, n)];
-				ts.layerSizes[layer] = layerSize78<layer1Size,layer2Size>(layer, n);
-			}
-
-			apply78<layer1Size,layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
+			this->applyImplementation(permutation, nullptr, packedSize, false);
 		};
+
+		void pack(int *src, int *dst, int packedSize) {
+            this->applyImplementation(dst, src, packedSize, false);
+        };
+
+        void unpack(int *src, int *dst, int packedSize) {
+            this->applyImplementation(dst, src, packedSize, true);
+        };
 	
 		void print(uint64_t *h_bitmask) {
 			// Print bitmask
