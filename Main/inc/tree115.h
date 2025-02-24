@@ -1,6 +1,5 @@
 #include <cub/cub.cuh>
 #include <cuda/std/bit>
-#include <cuda/std/cstdint>
 #include <encodingBase.h>
 #include <iostream>
 #include <thrust/functional.h>
@@ -116,7 +115,7 @@ improvedApply(int numPacked, int *permutation, int bitmaskSize, TreeStructure st
 				layerSize = min(layerSize, 32);
 				uint32_t *layer = &structure.layers[layerIdx][nextLayerOffset];
 
-				int nextPowOf2 = cuda::std::bit_ceil(layerSize);
+				int nextPowOf2 = layerSize;
 				if (nextPowOf2 & (nextPowOf2 - 1)){
 					nextPowOf2 |= nextPowOf2 >> 1;
     				nextPowOf2 |= nextPowOf2 >> 2;
