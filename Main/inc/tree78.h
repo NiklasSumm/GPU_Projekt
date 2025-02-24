@@ -2,6 +2,24 @@
 
 #include <encodingBase.h>
 
+struct BlockPrefixCallbackOp
+{
+    // Running prefix
+    int running_total;
+
+    // Constructor
+    __host__ BlockPrefixCallbackOp(int running_total) : running_total(running_total) {}
+
+    // Callback operator to be entered by the first warp of threads in the block.
+    // Thread-0 is responsible for returning a value for seeding the block-wide scan.
+    __host__ int operator()(int block_aggregate)
+    {
+        int old_prefix = running_total;
+        running_total += block_aggregate;
+        return old_prefix;
+    }
+};
+
 template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
 setupKernel78(int numElements, uint64_t *input)
@@ -14,6 +32,9 @@ setupKernel78(int numElements, uint64_t *input)
 	using BlockScan = cub::BlockScan<unsigned int, blockSize>;
 	__shared__ typename BlockScan::TempStorage temp_storage;
 
+	// Initialize running total
+    BlockPrefixCallbackOp prefix_op(0);
+
 	unsigned int elementId = 0;
 
 	for (int i = 0; i < iterations; i++) {
@@ -25,11 +46,11 @@ setupKernel78(int numElements, uint64_t *input)
 			thread_data = __popcll(input[elementId]);
 
 		// Collectively compute the block-wide inclusive sum
-		BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, aggregate);
+		BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, prefix_op);
 
 		// Every second thread writes value in first layer
 		if ((((threadIdx.x + 1) & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(1 << (layer1Size - 6))] = static_cast<unsigned short>(thread_data + aggregateSum);
+			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(1 << (layer1Size - 6))] = static_cast<unsigned short>(thread_data);
 			//printf("%i - %i", threadIdx.x, thread_data + aggregateSum);
 		}
 
@@ -40,7 +61,7 @@ setupKernel78(int numElements, uint64_t *input)
 	// Last thread of each full block writes into layer 2
 	if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
 		int offset = numElements*2 + ((numElements+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
-		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
+		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data;
 	}
 }
 
@@ -261,7 +282,7 @@ class Tree78 : public EncodingBase {
 
 			// Print second layer layer (int)
 			offset = offset / 2 + (size+1) / 2;
-			size = (n + (1 << (layer1Size - 6)) * (1 << layer2Size) - 1) / ((1 << (layer1Size - 6)) * (1 << layer2Size));
+			size = (n + (1 << (layer1Size - 6)) * (1 << layer2Size) - 1) / (1 << (layer1Size - 6)) * (1 << layer2Size);
 			if (size < 500) {
 				std::cout << "layer 2: ";
 				for (int i = offset; i < offset+size; i++) {
