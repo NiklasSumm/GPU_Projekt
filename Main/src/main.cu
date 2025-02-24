@@ -233,9 +233,9 @@ int main(int argc, char *argv[])
 		printf("Apply Time: %f ms\n", 1e3 * applyTimer.getTime() / iterations);
 		printf("Apply Bandwidth: %f GB/s\n", 1e-9 * applyTimer.getBandwidth(numElements * sizeof(long)) * iterations);
 
-		ChTimer totalTimer = setupTimer + applyTimer;
-		printf("Total Time: %f ms\n", 1e3 * totalTimer.getTime() / iterations);
-		printf("Total Bandwidth: %f GB/s\n", 1e-9 * totalTimer.getBandwidth(numElements * sizeof(long)) * iterations);
+		//ChTimer totalTimer = setupTimer + applyTimer;
+		//printf("Total Time: %f ms\n", 1e3 * totalTimer.getTime() / iterations);
+		//printf("Total Bandwidth: %f GB/s\n", 1e-9 * totalTimer.getBandwidth(numElements * sizeof(long)) * iterations);
 	}
 
 	return 0;
