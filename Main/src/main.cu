@@ -22,6 +22,8 @@
 #include <cub/cub.cuh>
 #include <cuda/functional>
 #include <bits/stl_numeric.h>
+#include <curand.h>
+#include <curand_kernel.h>
 
 #include <thrust/scan.h>
 #include <thrust/execution_policy.h>
@@ -31,6 +33,7 @@
 #include <tree115.h>
 #include <tree78.h>
 #include <tree88.h>
+#include <baseline.h>
 
 const static int DEFAULT_NUM_ELEMENTS = 10;
 
@@ -58,6 +61,27 @@ int* packedPermutation(int packedSize, int expandedSize, long* h_bitmask) {
 	return permutation;
 }
 
+__global__ void
+populateBitmask(int numElements, uint32_t *bitmask, float sparsity)
+{
+	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (elementIdx < numElements) {
+
+		curandState state;
+		curand_init(1234, elementIdx, 0, &state);
+
+		uint32_t element = 0xffffffff;
+		for (uint32_t k = 0; k < sizeof(element) * 8; k++) {
+			if (curand_uniform(&state) < sparsity) {
+				// element |= 1 << k;
+				element &= ~(1 << k);
+			}
+		}
+		bitmask[elementIdx] = element;
+	}
+}
+
 //
 // Main
 //
@@ -79,6 +103,13 @@ int main(int argc, char *argv[])
 			  << "*** Starting ..." << std::endl
 			  << "***" << std::endl;
 
+	int iterations = 1;
+	chCommandLineGet<int>(&iterations, "i", argc, argv);
+	chCommandLineGet<int>(&iterations, "num-iterations", argc, argv);
+
+	bool benchmark = chCommandLineGetBool("benchmark", argc, argv);
+	bool validate = chCommandLineGetBool("validate", argc, argv);
+
 	//
 	// Allocate Memory
 	//
@@ -91,45 +122,61 @@ int main(int argc, char *argv[])
 
 	long *h_bitmask;
 	cudaMallocHost(&h_bitmask, static_cast<size_t>(treeSize));
-	
-	// Initialize bitmask with random data
-	srand(0); // Always the same random numbers
-	int packedSize = 0;
-	for (int i = 0; i < numElements*2; i++) {
-		// unsigned int element = static_cast<unsigned int>(rand());
-		uint32_t element = std::numeric_limits<uint32_t>::max();
-		packedSize += popcount(element);
-		reinterpret_cast<uint32_t*>(h_bitmask)[i] = element;
-		// reinterpret_cast<unsigned int*>(h_bitmask)[i] = std::numeric_limits<unsigned int>::max();
-	}
 
-	//
-	// Copy Data to the Device
-	//
+	float sparsity = 0.0;
+	chCommandLineGet<float>(&sparsity, "sparsity", argc, argv);
+
+	// Generate bitmask
 	long *d_bitmask;
 	cudaMalloc(&d_bitmask, static_cast<size_t>(treeSize));
-	cudaMemcpy(d_bitmask, h_bitmask, static_cast<size_t>(numElements * sizeof(*d_bitmask)), cudaMemcpyHostToDevice); // Only copy bitmask
+	populateBitmask<<<(numElements*2 + 1023)/1024, 1024>>>(numElements*2, reinterpret_cast<uint32_t*>(d_bitmask), sparsity);
 	cudaDeviceSynchronize();
 
-	Tree115<256> tree115 = Tree115<256>{};
-	Tree78<128> tree78 = Tree78<128>{};
-	Tree88<256,11,5> tree88 = Tree88<256,11,5>{};
+	// Copy bitmask back to host and count packed size
+	cudaMemcpy(h_bitmask, d_bitmask, static_cast<size_t>(numElements * sizeof(*d_bitmask)), cudaMemcpyDeviceToHost); // Only copy bitmask
+	cudaDeviceSynchronize();
+
+	int packedSize = 0;
+	for (int i = 0; i < numElements*2; i++) {
+		packedSize += popcount(reinterpret_cast<uint32_t*>(h_bitmask)[i]);
+	}
+
+	// Alloc result array. For now we produce a full permutation, which can easily be extended to map data.
+	int* d_permutation;
+	cudaMalloc(&d_permutation, static_cast<size_t>(packedSize*sizeof(int)));
+
+	// All implementations
+	Tree115<1024> tree115 = Tree115<1024>();
+	Tree115<1024> tree115solo = Tree115<1024>(false);
+	Tree78<512> tree78 = Tree78<512>{};
+	Tree88<1024> tree88 = Tree88<1024>{};
+	ThrustBaseline baseline = ThrustBaseline{};
 
 	// Select implementation based on command line parameters
 	EncodingBase* implementation;
 	if (chCommandLineGetBool("115", argc, argv)) {
 		implementation = &tree115;
+	} else if (chCommandLineGetBool("115solo", argc, argv)) {
+		implementation = &tree115solo;
 	} else if (chCommandLineGetBool("78", argc, argv)) {
 		implementation = &tree78;
 	} else if (chCommandLineGetBool("88", argc, argv)) {
 		implementation = &tree88;
+	} else if (chCommandLineGetBool("baseline", argc, argv)) {
+		implementation = &baseline;
 	} else {
 		exit(1);
 	}
 
 	// Setup implementation
-	implementation->setup(reinterpret_cast<uint64_t*>(d_bitmask), numElements);
+	if (benchmark) implementation->setup(reinterpret_cast<uint64_t*>(d_bitmask), numElements); // Warmup
+	ChTimer setupTimer;
+	setupTimer.start();
+	for (int i = 0; i < iterations; i++) {
+		implementation->setup(reinterpret_cast<uint64_t*>(d_bitmask), numElements);
+	}
 	cudaDeviceSynchronize();
+	setupTimer.stop();
 
 	// Copy full tree back and print structure
 	cudaMemcpy(h_bitmask, d_bitmask, static_cast<size_t>(treeSize), cudaMemcpyDeviceToHost);
@@ -148,24 +195,14 @@ int main(int argc, char *argv[])
 	}
 
 	// Apply implementation, producing a full permutation
-	int* d_permutation;
-	cudaMalloc(&d_permutation, static_cast<size_t>(packedSize*sizeof(int)));
-
-	implementation->apply(d_permutation, packedSize);
+	if (benchmark) implementation->apply(d_permutation, packedSize);
+	ChTimer applyTimer;
+	applyTimer.start();
+	for (int i = 0; i < iterations; i++) {
+		implementation->apply(d_permutation, packedSize);
+	}
 	cudaDeviceSynchronize();
-
-	int* h_permutation;
-	cudaMallocHost(&h_permutation, static_cast<size_t>(packedSize*sizeof(int)));
-	cudaMemcpy(h_permutation, d_permutation, static_cast<size_t>(packedSize*sizeof(int)), cudaMemcpyDeviceToHost); // Copy input back
-
-	// Compare permutation to expected permutation
-	int* permutation = packedPermutation(packedSize, numElements*64, h_bitmask);
-	for (int i = 0; i < packedSize; i++) {
-		if (h_permutation[i] != permutation[i]) {
-			printf("%d: %d (ref: %d)\n", i, h_permutation[i], permutation[i]);
-			break;
-		}
-	} 
+	applyTimer.stop();
 
 	// Check for Errors
 	cudaError = cudaGetLastError();
@@ -179,6 +216,35 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	// Validate the implementation
+	if (validate) {
+		int* h_permutation;
+		cudaMallocHost(&h_permutation, static_cast<size_t>(packedSize*sizeof(int)));
+		cudaMemcpy(h_permutation, d_permutation, static_cast<size_t>(packedSize*sizeof(int)), cudaMemcpyDeviceToHost); // Copy input back
+
+		// Compare permutation to expected permutation
+		int* permutation = packedPermutation(packedSize, numElements*64, h_bitmask);
+		for (int i = 0; i < packedSize; i++) {
+			if (h_permutation[i] != permutation[i]) {
+				printf("%d: %d (ref: %d)\n", i, h_permutation[i], permutation[i]);
+				exit(1);
+			}
+		}
+	}
+
+	// Calculate and print benchmark results
+	if (benchmark) {
+		printf("Setup Time: %f ms\n", 1e3 * setupTimer.getTime() / iterations);
+		printf("Setup Bandwidth: %f GB/s\n", 1e-9 * setupTimer.getBandwidth(numElements * sizeof(long)) * iterations);
+
+		printf("Apply Time: %f ms\n", 1e3 * applyTimer.getTime() / iterations);
+		printf("Apply Bandwidth: %f GB/s\n", 1e-9 * applyTimer.getBandwidth(numElements * sizeof(long)) * iterations);
+
+		ChTimer totalTimer = setupTimer + applyTimer;
+		printf("Total Time: %f ms\n", 1e3 * totalTimer.getTime() / iterations);
+		printf("Total Bandwidth: %f GB/s\n", 1e-9 * totalTimer.getBandwidth(numElements * sizeof(long)) * iterations);
+	}
+
 	return 0;
 }
 
@@ -186,31 +252,34 @@ void printHelp(char *argv)
 {
 	std::cout << "Help:" << std::endl
 			  << "  Usage: " << std::endl
-			  << "  " << argv << " [-p] [-s <num-elements>] [-t <threads_per_block>]"
+			  << "  " << argv << " [-s <bitmask-size>] [implementation]"
 			  << std::endl
 			  << "" << std::endl
-			  << "  -p|--pinned-memory" << std::endl
-			  << "    Use pinned Memory instead of pageable memory" << std::endl
-			  << "" << std::endl
-			  << "  -s <num-elements>|--size <num-elements>" << std::endl
-			  << "    Number of elements (particles)" << std::endl
+			  << "  -s <bitmask-size>|--size <bitmask-size>" << std::endl
+			  << "    Size of bitmask in steps of uint64_t datatype (64 bits)" << std::endl
 			  << "" << std::endl
 			  << "  -i <num-iterations>|--num-iterations <num-iterations>" << std::endl
-			  << "    Number of iterations" << std::endl
+			  << "    Number of iterations for benchmarking" << std::endl
 			  << "" << std::endl
-			  << "  -t <threads_per_block>|--threads-per-block <threads_per_block>" << std::endl
-			  << "    The number of threads per block" << std::endl
+			  << "  --benchmark" << std::endl
+			  << "    Calculate and print benchmarking metrics (this will implicitely run warmup kernels)" << std::endl
 			  << "" << std::endl
-			  << "  --silent" << std::endl
-			  << "    Suppress print output during iterations (useful for benchmarking)" << std::endl
+			  << "  --validate" << std::endl
+			  << "    Validate a specific implementation by producing a full permutation and comparing it against a CPU version" << std::endl
 			  << "" << std::endl
-			  << "  --soa" << std::endl
-			  << "    Use simple implementation with SOA optimization" << std::endl
+			  << "  --sparsity <fraction>" << std::endl
+			  << "    Control the fraction of how many bits in the mask are 0 (default: dense bitmask, sparsity 0.0)" << std::endl
 			  << "" << std::endl
-			  << "  --tiling" << std::endl
-			  << "    Use optimized implementation using shared memory tiling" << std::endl
+			  << "  --115" << std::endl
+			  << "    Use tree implementation with 4 layers and steps of 2^11 / 2^5 between first 2 layers" << std::endl
 			  << "" << std::endl
-			  << "  --stream" << std::endl
-			  << "    Use stream implementation with aritifical 4 MB limit" << std::endl
+			  << "  --78" << std::endl
+			  << "    Use tree implementation with 2 layers and steps of 2^7 / 2^8 between first 2 layers" << std::endl
+			  << "" << std::endl
+			  << "  --88" << std::endl
+			  << "    Use tree implementation with 2 layers and steps of 2^8 / 2^8 between first 2 layers" << std::endl
+			  << "" << std::endl
+			  << "  --baseline" << std::endl
+			  << "    Use baseline implementation based on thrust copy_if and fancy iterators" << std::endl
 			  << "" << std::endl;
 }
