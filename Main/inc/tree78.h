@@ -168,7 +168,7 @@ int layerOffsetInt78(int layer, int bitmaskSize) {
 	return offset;
 }
 
-template <int blockSize>
+template <int blockSize, int layer1Size, int layer2Size>
 class Tree78 : public EncodingBase {
 	private:
 		uint64_t *d_bitmask;
