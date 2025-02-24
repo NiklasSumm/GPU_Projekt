@@ -26,8 +26,8 @@ setupKernel78(int numElements, uint64_t *input)
 {	
 	int iterations = (((1 << (layer1Size - 6)) * (1 << layer2Size)) + blockDim.x - 1) / blockDim.x;
 
-	unsigned int aggregateSum = 0;
-	unsigned int aggregate = 0;
+	//unsigned int aggregateSum = 0;
+	///unsigned int aggregate = 0;
 
 	using BlockScan = cub::BlockScan<unsigned int, blockSize>;
 	__shared__ typename BlockScan::TempStorage temp_storage;
@@ -36,14 +36,16 @@ setupKernel78(int numElements, uint64_t *input)
     BlockPrefixCallbackOp prefix_op(0);
 
 	unsigned int elementId = 0;
+	unsigned int thread_data = 0;
 
 	for (int i = 0; i < iterations; i++) {
 		elementId = blockIdx.x * ((1 << (layer1Size - 6)) * (1 << layer2Size)) + i * blockDim.x + threadIdx.x;
 
 		// Load 64 bit bitmask section and count bits
-		unsigned int thread_data = 0;
 		if (elementId < numElements)
 			thread_data = __popcll(input[elementId]);
+		else
+			thread_data = 0;
 
 		// Collectively compute the block-wide inclusive sum
 		BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, prefix_op);
