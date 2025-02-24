@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 	// All implementations
 	Tree115<1024> tree115 = Tree115<1024>();
 	//Tree115<1024> tree115solo = Tree115<1024>(false);
-	Tree78<512,7,8> tree78 = Tree78<512,7,8>{};
+	Tree78<512,9,6> tree78 = Tree78<512,9,6>{};
 	Tree88<256,12,4> tree88 = Tree88<256,12,4>{};
 
 	// Select implementation based on command line parameters
