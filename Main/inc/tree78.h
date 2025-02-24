@@ -57,7 +57,7 @@ setupKernel78(int numElements, uint64_t *input)
 		}
 
 		// Accumulate the aggregate for the next iteration of the loop 
-		aggregateSum += aggregate;
+		//aggregateSum += aggregate;
 	}
 
 	// Last thread of each full block writes into layer 2
