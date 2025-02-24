@@ -229,8 +229,8 @@ class Tree88 : public EncodingBase {
 
 			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
 			for (int layer = 0; layer < 3; layer++) {
-				ts.layers[layer] = &d_bitmask_int[layerOffsetInt88(layer, n)];
-				ts.layerSizes[layer] = layerSize88(layer, n);
+				ts.layers[layer] = &d_bitmask_int[layerOffsetInt88<layer1Size, layer2Size>(layer, n)];
+				ts.layerSizes[layer] = layerSize88<layer1Size, layer2Size>(layer, n);
 			}
 
 			apply88<layer1Size, layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, dst, src, n, ts, false);
@@ -241,8 +241,8 @@ class Tree88 : public EncodingBase {
 
 			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
 			for (int layer = 0; layer < 3; layer++) {
-				ts.layers[layer] = &d_bitmask_int[layerOffsetInt88(layer, n)];
-				ts.layerSizes[layer] = layerSize88(layer, n);
+				ts.layers[layer] = &d_bitmask_int[layerOffsetInt88<layer1Size, layer2Size>(layer, n)];
+				ts.layerSizes[layer] = layerSize88<layer1Size, layer2Size>(layer, n);
 			}
 
 			apply88<layer1Size, layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, dst, src, n, ts, true);
