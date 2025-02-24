@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
 
 	// All implementations
 	Tree115<1024> tree115 = Tree115<1024>();
-	Tree115<1024> tree115solo = Tree115<1024>(false);
+	//Tree115<1024> tree115solo = Tree115<1024>(false);
 	Tree78<512> tree78 = Tree78<512>{};
 	Tree88<256,8,8> tree88 = Tree88<256,8,8>{};
 
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 	if (chCommandLineGetBool("115", argc, argv)) {
 		implementation = &tree115;
 	} else if (chCommandLineGetBool("115solo", argc, argv)) {
-		implementation = &tree115solo;
+		//implementation = &tree115solo;
 	} else if (chCommandLineGetBool("78", argc, argv)) {
 		implementation = &tree78;
 	} else if (chCommandLineGetBool("88", argc, argv)) {
