@@ -46,7 +46,7 @@ setupKernel88(int numElements, uint64_t *input)
 
 template <int layer1Size, int layer2Size>
 __global__ void
-apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structure)
+apply88(int numPacked, int *dst, int *src, int bitmaskSize, TreeStructure structure, bool unpack)
 {
 	int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -138,7 +138,16 @@ apply88(int numPacked, int *permutation, int bitmaskSize, TreeStructure structur
 				}
 			}
 		}
-		permutation[elementIdx] = expandedIndex;
+		
+        if (src) {
+			if (unpack) {
+				dst[expandedIndex] = src[elementIdx]; // Unpack: Load from packed, write to expanded
+			} else {
+				dst[elementIdx] = src[expandedIndex]; // Pack: Load from expanded, write to packed
+			}
+		} else {
+			dst[elementIdx] = expandedIndex; // Write permutation (used in apply)
+		}
 	}
 }
 
@@ -184,7 +193,7 @@ class Tree88 : public EncodingBase {
 			setupKernel88<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
 
             //int offset = n*2 + ((n+3)/4 + 1)/2;
-	    int offset = n*2 + ((n+(int)(pow(2, layer1Size - 6))-1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
+	        int offset = n*2 + ((n+(int)(pow(2, layer1Size - 6))-1)/(int)(pow(2, layer1Size - 6)) + 1)/2;
             int size = gridSize; //(n+1023)/1024;
             uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
 
@@ -204,8 +213,6 @@ class Tree88 : public EncodingBase {
 		};
 
 		void apply(int *permutation, int packedSize) {
-			// TODO
-
 			TreeStructure ts;
 
 			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
@@ -214,8 +221,32 @@ class Tree88 : public EncodingBase {
 				ts.layerSizes[layer] = layerSize88<layer1Size,layer2Size>(layer, n);
 			}
 
-			apply88<layer1Size, layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, permutation, n, ts);
+            apply88<layer1Size, layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, permutation, nullptr, n, ts, false);
 		};
+
+        void pack(int *src, int *dst, int packedSize) {
+            TreeStructure ts;
+
+			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
+			for (int layer = 0; layer < 3; layer++) {
+				ts.layers[layer] = &d_bitmask_int[layerOffsetInt88(layer, n)];
+				ts.layerSizes[layer] = layerSize88(layer, n);
+			}
+
+			apply88<layer1Size, layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, dst, src, n, ts, false);
+        };
+
+        void unpack(int *src, int *dst, int packedSize) {
+            TreeStructure ts;
+
+			uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
+			for (int layer = 0; layer < 3; layer++) {
+				ts.layers[layer] = &d_bitmask_int[layerOffsetInt88(layer, n)];
+				ts.layerSizes[layer] = layerSize88(layer, n);
+			}
+
+			apply88<layer1Size, layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, dst, src, n, ts, true);
+        };
 	
 		void print(uint64_t *h_bitmask) {
 			// Print bitmask
