@@ -249,7 +249,7 @@ class Tree78 : public EncodingBase {
 
 			// Print first layer (short)
 			int offset = n*4; // 4 shorts in one long
-			int size = (n + (int)(pow(2, layer1Size - 6)) - 1) / (int)(pow(2, layer1Size - 6));
+			int size = (n + (1 << (layer1Size - 6)) - 1) / (1 << (layer1Size - 6));
 			if (size < 500) {
 				std::cout << "layer 1: ";
 				for (int i = offset; i < offset+size; i++) {
