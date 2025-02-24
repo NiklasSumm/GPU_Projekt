@@ -45,6 +45,12 @@ chCommandLinePassback( int *p, char *s )
     *p = atoi( s );
 }
 
+static void
+chCommandLinePassback( float *p, char *s )
+{
+    *p = std::stof( s );
+}
+
 //
 // Passes back an integer or string
 //
@@ -139,3 +145,5 @@ chCommandLineGet( chShmooRange *range, const char *keyword, int argc, char *argv
 #endif // __CUDAHANDBOOK_SHMOO__
 
 #endif
+
+
