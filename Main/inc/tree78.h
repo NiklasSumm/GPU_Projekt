@@ -261,7 +261,7 @@ class Tree78 : public EncodingBase {
 
 			// Print second layer layer (int)
 			offset = offset / 2 + (size+1) / 2;
-			size = (n + (1 << (layer1Size - 6)) * (1 << layer2Size) - 1) / (1 << (layer1Size - 6)) * (1 << layer2Size);
+			size = (n + (1 << (layer1Size - 6)) * (1 << layer2Size) - 1) / ((1 << (layer1Size - 6)) * (1 << layer2Size));
 			if (size < 500) {
 				std::cout << "layer 2: ";
 				for (int i = offset; i < offset+size; i++) {
