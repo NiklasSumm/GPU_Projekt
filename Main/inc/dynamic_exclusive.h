@@ -1,5 +1,5 @@
 #include <cub/cub.cuh>
-
+#include <block_prefix_callback_op.h>
 #include <encodingBase.h>
 
 
@@ -9,39 +9,37 @@ setupKernel1(int numElements, long *input)
 {
     int iterations = (1023 + blockDim.x) / blockDim.x;
 
-    unsigned int aggregateSum = 0;
-    unsigned int aggregate = 0;
-
     using BlockScan = cub::BlockScan<unsigned int, blockSize>;
     __shared__ typename BlockScan::TempStorage temp_storage;
 
-    unsigned int elementId = 0;
+    BlockPrefixCallbackOp prefix_op(0);
+
+    unsigned int elementId;
+    unsigned int original_data;
+    unsigned int thread_data;
+
     for (int i = 0; i < iterations; i++) {
         elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
 
         // Load 64 bit bitmask section and count bits
-        unsigned int original_data = 0;
-        if (elementId < numElements) {
+        if (elementId < numElements)
             original_data = __popcll(input[elementId]);
-        }
-        unsigned int thread_data;
+        else
+            original_data = 0;
 
         // Collectively compute the block-wide exclusive sum
-        BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
+        BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, prefix_op);
 
         // First thread of each warp writes in layer 1
         if (((threadIdx.x & 31) == 0) && (elementId < numElements)) {
-            reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data + aggregateSum);
+            reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/32] = static_cast<unsigned short>(thread_data);
         }
-
-        // Accumulate the aggregate for the next iteration of the loop 
-        aggregateSum += aggregate;
     }
 
     // Last thread of each full block writes into layer 2
     if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
         int offset = numElements*2 + ((numElements+31)/32 + 1)/2;
-        reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = aggregateSum;
+        reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
     }
 }
 
@@ -51,25 +49,26 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 {
     int iterations = (1023 + blockDim.x) / blockDim.x;
 
-    unsigned int aggregateSum = 0;
-    unsigned int aggregate = 0;
-
     using BlockScan = cub::BlockScan<unsigned int, blockSize>;
     __shared__ typename BlockScan::TempStorage temp_storage;
 
-    unsigned int elementId = 0;
+    BlockPrefixCallbackOp prefix_op(0);
+
+    unsigned int elementId;
+    unsigned int original_data;
+    unsigned int thread_data;
+
     for (int i = 0; i < iterations; i++) {
         elementId = blockIdx.x * 1024 + i * blockDim.x + threadIdx.x;
 
         // Load prepared values from previous kernel
-        unsigned int original_data = 0;
-        if (elementId < numElements) {
+        if (elementId < numElements)
             original_data = input[elementId];
-        }
-        unsigned int thread_data;
+        else
+            original_data = 0;
 
         // Collectively compute the block-wide exclusive sum over the prepared values
-        BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, aggregate);
+        BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, prefix_op);
 
         // The value in thread_data stored by the first thread in a warp needs to be subtracted
         // from the values each thread in the warp has, to get the correct values for the next value.
@@ -83,17 +82,14 @@ setupKernel2(int numElements, unsigned int *input, bool next=true, bool nextButO
 
         // First thread of each warp writes in next layer. These values are already fully correct.
         if (next && ((threadIdx.x & 31)) == 0 && (elementId < numElements)) {
-            input[numElements+(elementId/32)] = thread_data + aggregateSum;
+            input[numElements+(elementId/32)] = thread_data;
         }
-
-        // Accumulate the aggregate for the next iteration of the loop 
-        aggregateSum += aggregate;
     }
 
     // Last thread of each full block writes into next but one layer. These values need to be corrected.
     if (nextButOne && (threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
         int offset = numElements + (numElements+31)/32;
-        input[offset+blockIdx.x] = aggregateSum;
+        input[offset+blockIdx.x] = thread_data + original_data;
     }
 }
 
