@@ -18,39 +18,32 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
     unsigned int original_data;
     unsigned int thread_data;
 
-	for (int i = 0; i < iterations; i++) {
-		elementId = blockIdx.x * ((1 << (layer1Size - 6)) * (1 << layer2Size)) + i * blockDim.x + threadIdx.x;
-
-        // Load 64 bit bitmask section and count bits
-        if (elementId < numElements)
-            original_data = __popcll(input[elementId]);
-        else
-            original_data = 0;
-
-        // Collectively compute the block-wide inclusive sum
-        BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, prefix_op);
-        __syncthreads();
-
-		// Every fourth thread writes value in first layer
-		if (((threadIdx.x & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements) && (threadIdx.x < (1 << (layer1Size + layer2Size - 6)))) {
-			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/((1 << (layer1Size - 6)))] = static_cast<unsigned short>(thread_data);
-		}
-    }
-
-    if (elementId == print_id){
-        printf("1---------------\n");
-    }
-
-	// Last thread of each full block writes into layer 2
-	if ((((threadIdx.x == blockDim.x - 1) && (threadIdx.x < ((1 << (layer1Size + layer2Size - 6))))) || (threadIdx.x == ((1 << (layer1Size + layer2Size - 6))- 1))) && (elementId < numElements)) {
-		int offset = numElements*2 + ((numElements+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
-		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
-
-        if (elementId == print_id){
-            printf("2----------%i\n", threadIdx.x);
+    if (threadIdx.x < (1 << (layer1Size + layer2Size - 6))){
+	    for (int i = 0; i < iterations; i++) {
+	    	elementId = blockIdx.x * ((1 << (layer1Size - 6)) * (1 << layer2Size)) + i * blockDim.x + threadIdx.x;
+    
+            // Load 64 bit bitmask section and count bits
+            if (elementId < numElements)
+                original_data = __popcll(input[elementId]);
+            else
+                original_data = 0;
+    
+            // Collectively compute the block-wide inclusive sum
+            BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, prefix_op);
+            __syncthreads();
+    
+	    	// Every fourth thread writes value in first layer
+	    	if (((threadIdx.x & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
+	    		reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/((1 << (layer1Size - 6)))] = static_cast<unsigned short>(thread_data);
+	    	}
         }
-
-	}
+    
+	    // Last thread of each full block writes into layer 2
+	    if (((threadIdx.x == blockDim.x - 1) || (threadIdx.x == ((1 << (layer1Size + layer2Size - 6))- 1))) && (elementId < numElements)) {
+	    	int offset = numElements*2 + ((numElements+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
+	    	reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
+	    }
+    }
 }
 
 template <int layer1Size, int layer2Size>
