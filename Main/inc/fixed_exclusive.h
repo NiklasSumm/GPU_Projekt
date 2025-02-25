@@ -47,7 +47,7 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
 		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
 
         if (elementId == print_id){
-            printf("2--------------\n");
+            printf("2----------%i\n", threadIdx.x);
         }
 
 	}
