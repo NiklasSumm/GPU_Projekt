@@ -1,6 +1,5 @@
 #include <cub/cub.cuh>
 #include <encodingBase.h>
-#include <cuda/std/bit>
 
 template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
@@ -59,15 +58,7 @@ applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
         if (layerSize > 1) {
             uint32_t *layer2 = &structure.layers[2][0];
 
-            int nextPowOf2 = cuda::std::bit_ceil<int>(layerSize);
-			if (nextPowOf2 & (nextPowOf2 - 1)){
-				nextPowOf2 |= nextPowOf2 >> 1;
-    			nextPowOf2 |= nextPowOf2 >> 2;
-    			nextPowOf2 |= nextPowOf2 >> 4;
-    			nextPowOf2 |= nextPowOf2 >> 8;
-    			nextPowOf2 |= nextPowOf2 >> 16;
-				nextPowOf2 = (nextPowOf2 ^ (nextPowOf2 << 1)) - 1;
-			}
+            int nextPowOf2 = getNextLargestPowerOf2(layerSize);
 
 			int searchIndex = 0;
 			int searchStep = nextPowOf2;
@@ -94,15 +85,7 @@ applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
             layerSize = min(layerSize, structure.layerSizes[1] - nextLayerOffset);
             uint16_t *layer1 = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
 
-            int nextPowOf2 = layerSize;
-			if (nextPowOf2 & (nextPowOf2 - 1)){
-				nextPowOf2 |= nextPowOf2 >> 1;
-    			nextPowOf2 |= nextPowOf2 >> 2;
-    			nextPowOf2 |= nextPowOf2 >> 4;
-    			nextPowOf2 |= nextPowOf2 >> 8;
-    			nextPowOf2 |= nextPowOf2 >> 16;
-				nextPowOf2 = (nextPowOf2 ^ (nextPowOf2 << 1)) - 1;
-			}
+            int nextPowOf2 = getNextLargestPowerOf2(layerSize);
 
 			int searchIndex = 0;
 			int searchStep = nextPowOf2;
