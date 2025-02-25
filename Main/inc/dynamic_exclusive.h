@@ -108,16 +108,7 @@ applyDynamicExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeSt
                 layerSize = min(layerSize, 32);
                 uint32_t *layer = &structure.layers[layerIdx][nextLayerOffset];
 
-                int nextPowOf2 = layerSize;
-				if (nextPowOf2 & (nextPowOf2 - 1)){
-					nextPowOf2 |= nextPowOf2 >> 1;
-    				nextPowOf2 |= nextPowOf2 >> 2;
-    				nextPowOf2 |= nextPowOf2 >> 4;
-    				nextPowOf2 |= nextPowOf2 >> 8;
-    				nextPowOf2 |= nextPowOf2 >> 16;
-
-					nextPowOf2 = (nextPowOf2 ^ (nextPowOf2 << 1)) - 1;
-				}
+                int nextPowOf2 = getNextLargestPowerOf2(layerSize);
 
 				int searchIndex = 0;
 				int searchStep = nextPowOf2;
@@ -144,16 +135,7 @@ applyDynamicExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeSt
             layerSize = min(layerSize, 32);
             uint16_t *layer = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
 
-            int nextPowOf2 = layerSize;
-			if (nextPowOf2 & (nextPowOf2 - 1)){
-				nextPowOf2 |= nextPowOf2 >> 1;
-    			nextPowOf2 |= nextPowOf2 >> 2;
-    			nextPowOf2 |= nextPowOf2 >> 4;
-    			nextPowOf2 |= nextPowOf2 >> 8;
-    			nextPowOf2 |= nextPowOf2 >> 16;
-
-				nextPowOf2 = (nextPowOf2 ^ (nextPowOf2 << 1)) - 1;
-			}
+            int nextPowOf2 = getNextLargestPowerOf2(layerSize);
 
 			int searchIndex = 0;
 			int searchStep = nextPowOf2; //cuda::std::bit_ceil<int>(layerSize);
@@ -433,6 +415,19 @@ int layerOffsetInt(int layer, int bitmaskSize) {
         offset += size;
     }
     return offset;
+}
+
+int getNextLargestPowerOf2(int num){
+    if (num & (num - 1)){
+		num |= num >> 1;
+    	num |= num >> 2;
+    	num |= num >> 4;
+    	num |= num >> 8;
+    	num |= num >> 16;
+
+		num = (num ^ (num << 1)) - 1;
+	}
+    return num;
 }
 
 template <int blockSize>
