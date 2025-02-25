@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
         implementation = &fixedInclusive;
     } else if (chCommandLineGetBool("fixedExclusive", argc, argv)) {
         //FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
-        implementation = std::make_unique<FixedExclusive<1024,8,8>>();
+        implementation = &std::make_unique<FixedExclusive<1024,8,8>>();
     } else if (chCommandLineGetBool("baseline", argc, argv)) {
         //ThrustBaseline baseline = ThrustBaseline(packedSize);
         implementation = &baseline;
