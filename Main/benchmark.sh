@@ -1,8 +1,10 @@
 #!/bin/bash
 
 iterations=10
+block_sizes="32 64 128 256 512 1024"
 size_options="1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576 2097152 4194304 8388608 16777216"
-implementations="dynamicExclusive fixedInclusive fixedExclusive baseline baselineSetupLess"
+#implementations="dynamicExclusive fixedInclusive fixedExclusive baseline baselineSetupLess"
+implementation=fixedExclusive
 
 # Create headline for output csv
 echo "bitmask_size_bytes, time_setup_115_ms, time_apply_115_ms, time_total_115_ms, time_setup_78_ms, time_apply_78_ms, time_total_78_ms, time_setup_88_ms, time_apply_88_ms, time_total_88_ms, time_setup_baseline_ms, time_apply_baseline_ms, time_total_baseline_ms, time_setup_baseline_sl_ms, time_apply_baseline_sl_ms, time_total_baseline_sl_ms" > measurement_times.csv
@@ -12,9 +14,9 @@ for size in $size_options; do
     
     echo -n "$size" >> measurement_times.csv
     echo -n "$size" >> measurement_bandwidth.csv
-    for impl in $implementations; do
-        echo "$impl"
-        output=$(./bin/project --benchmark --$impl --i $iterations --s $size)
+    for block_size in $block_sizes; do
+        echo "$block_size"
+        output=$(./bin/project --benchmark --$implementation --i $iterations --s $size --blockSize $block_size)
         echo "$output"
         time_setup_ms=`echo "$output" | awk '/Setup Time:/ {print $3}'`
         time_apply_ms=`echo "$output" | awk '/Apply Time:/ {print $3}'`
