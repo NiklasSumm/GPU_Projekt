@@ -144,32 +144,32 @@ int main(int argc, char *argv[])
     cudaMalloc(&d_permutation, static_cast<size_t>(packedSize*sizeof(int)));
 
     // All implementations
-    //DynamicExclusive<1024> dynamicExclusive = DynamicExclusive<1024>();
-    //DynamicExclusive<1024> dynamicExclusiveSolo = DynamicExclusive<1024>(false);
-    //FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};
-    //FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
-    //ThrustBaseline baseline = ThrustBaseline(packedSize);
-    //ThrustBaseline baselineSetupLess = ThrustBaseline();
+    DynamicExclusive<1024> dynamicExclusive = DynamicExclusive<1024>();
+    DynamicExclusive<1024> dynamicExclusiveSolo = DynamicExclusive<1024>(false);
+    FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};
+    FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
+    ThrustBaseline baseline = ThrustBaseline(packedSize);
+    ThrustBaseline baselineSetupLess = ThrustBaseline();
 
     // Select implementation based on command line parameters
     EncodingBase* implementation;
     if (chCommandLineGetBool("dynamicExclusive", argc, argv)) {
-        DynamicExclusive<1024> dynamicExclusive = DynamicExclusive<1024>();
+        //DynamicExclusive<1024> dynamicExclusive = DynamicExclusive<1024>();
         implementation = &dynamicExclusive;
     } else if (chCommandLineGetBool("dynamicExclusiveSolo", argc, argv)) {
-        DynamicExclusive<1024> dynamicExclusiveSolo = DynamicExclusive<1024>(false);
+        //DynamicExclusive<1024> dynamicExclusiveSolo = DynamicExclusive<1024>(false);
         implementation = &dynamicExclusiveSolo;
     } else if (chCommandLineGetBool("fixedInclusive", argc, argv)) {
-        FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};
+        //FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};
         implementation = &fixedInclusive;
     } else if (chCommandLineGetBool("fixedExclusive", argc, argv)) {
-        FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
+        //FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
         implementation = &fixedExclusive;
     } else if (chCommandLineGetBool("baseline", argc, argv)) {
-        ThrustBaseline baseline = ThrustBaseline(packedSize);
+        //ThrustBaseline baseline = ThrustBaseline(packedSize);
         implementation = &baseline;
     } else if (chCommandLineGetBool("baselineSetupLess", argc, argv)) {
-        ThrustBaseline baselineSetupLess = ThrustBaseline();
+        //ThrustBaseline baselineSetupLess = ThrustBaseline();
         implementation = &baselineSetupLess;
     } else {
         exit(1);
