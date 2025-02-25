@@ -154,23 +154,17 @@ int main(int argc, char *argv[])
     // Select implementation based on command line parameters
     std::unique_ptr<EncodingBase> implementation;
     if (chCommandLineGetBool("dynamicExclusive", argc, argv)) {
-        //DynamicExclusive<1024> dynamicExclusive = DynamicExclusive<1024>();
-        //implementation = &dynamicExclusive;
+        implementation = std::make_unique<DynamicExclusive<1024>>();
     } else if (chCommandLineGetBool("dynamicExclusiveSolo", argc, argv)) {
-        //DynamicExclusive<1024> dynamicExclusiveSolo = DynamicExclusive<1024>(false);
-        //implementation = &dynamicExclusiveSolo;
+        implementation = std::make_unique<DynamicExclusive<1024>>(false);
     } else if (chCommandLineGetBool("fixedInclusive", argc, argv)) {
-        //FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};
-        //implementation = &fixedInclusive;
+        implementation = std::make_unique<FixedInclusive<512,7,8>>();
     } else if (chCommandLineGetBool("fixedExclusive", argc, argv)) {
-        //FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
         implementation = std::make_unique<FixedExclusive<1024,8,8>>();
     } else if (chCommandLineGetBool("baseline", argc, argv)) {
-        //ThrustBaseline baseline = ThrustBaseline(packedSize);
-        //implementation = &baseline;
+        implementation = std::make_unique<ThrustBaseline>(packedSize);
     } else if (chCommandLineGetBool("baselineSetupLess", argc, argv)) {
-        //ThrustBaseline baselineSetupLess = ThrustBaseline();
-        //implementation = &baselineSetupLess;
+        implementation = std::make_unique<ThrustBaseline>();
     } else {
         exit(1);
     }
