@@ -42,7 +42,7 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
     }
 
 	// Last thread of each full block writes into layer 2
-	if (((threadIdx.x == blockDim.x - 1) || (threadIdx.x == ((1 << (layer1Size + layer2Size - 6))- 1))) && (elementId < numElements)) {
+	if ((((threadIdx.x == blockDim.x - 1) && (threadIdx.x < ((1 << (layer1Size + layer2Size - 6))))) || (threadIdx.x == ((1 << (layer1Size + layer2Size - 6))- 1))) && (elementId < numElements)) {
 		int offset = numElements*2 + ((numElements+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
 		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
 
