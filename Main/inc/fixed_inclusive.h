@@ -56,30 +56,31 @@ applyFixedInclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
         if (layerSize > 1) {
             uint32_t *layer2 = &structure.layers[2][0];
 
-            // Index and step for binary search
-            int searchIndex = (layerSize / 2) - 1;
-            int searchStep = (layerSize + 1) / 2;
+            int nextPowOf2 = layerSize;
+			if (nextPowOf2 & (nextPowOf2 - 1)){
+				nextPowOf2 |= nextPowOf2 >> 1;
+    			nextPowOf2 |= nextPowOf2 >> 2;
+    			nextPowOf2 |= nextPowOf2 >> 4;
+    			nextPowOf2 |= nextPowOf2 >> 8;
+    			nextPowOf2 |= nextPowOf2 >> 16;
+				nextPowOf2 = (nextPowOf2 ^ (nextPowOf2 << 1)) - 1;
+			}
 
-            uint32_t layerSum = static_cast<uint32_t>(layer2[searchIndex]);
+			int searchIndex = nextPowOf2;
+			int searchStep = nextPowOf2;
 
-            while (searchStep > 1){
-                searchStep = (searchStep + 1) / 2;
-                searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
-                searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
-                layerSum = static_cast<uint32_t>(layer2[searchIndex]);
-            }
-            // After binary search we either landed on the correct value or the one above
-            // So we have to check if the result is correct and if not go to the value below
-            if ((layerSum < bitsToFind) && (searchIndex < layerSize - 1)){
-                searchIndex++;
-                layerSum = static_cast<uint32_t>(layer2[searchIndex]);
-            }
-
-            if (layerSum >= bitsToFind) {
-                uint32_t previousLayerSum = searchIndex > 0 ? static_cast<uint32_t>(layer2[searchIndex-1]) : 0;
-                bitsToFind -= previousLayerSum;
-                nextLayerOffset += searchIndex;
-            }
+			while (searchStep > 1){
+				searchStep >>= 1;
+				int testIndex = min(searchIndex - searchStep, layerSize - 1);
+				searchIndex -= (static_cast<uint32_t>(layer2[testIndex]) >= bitsToFind) * searchStep;
+			}
+			searchIndex = min(searchIndex, layerSize - 1);
+			
+            uint32_t previousLayerSum = searchIndex > 0 ? static_cast<uint32_t>(layer2[searchIndex-1]) : 0;
+			if (previousLayerSum < bitsToFind) {
+				bitsToFind -= previousLayerSum;
+				nextLayerOffset += searchIndex;
+			}
             nextLayerOffset *= (1 << layer2Size);
         }
 
