@@ -163,10 +163,10 @@ int main(int argc, char *argv[])
         //FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};
         implementation = &fixedInclusive;
     } else if (chCommandLineGetBool("fixedExclusive", argc, argv)) {
-        //FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
+        FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
         implementation = &fixedExclusive;
     } else if (chCommandLineGetBool("baseline", argc, argv)) {
-        ThrustBaseline baseline = ThrustBaseline(packedSize);
+        //ThrustBaseline baseline = ThrustBaseline(packedSize);
         implementation = &baseline;
     } else if (chCommandLineGetBool("baselineSetupLess", argc, argv)) {
         //ThrustBaseline baselineSetupLess = ThrustBaseline();
