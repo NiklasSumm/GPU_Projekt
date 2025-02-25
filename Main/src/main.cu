@@ -124,6 +124,9 @@ int main(int argc, char *argv[])
     float sparsity = 0.0;
     chCommandLineGet<float>(&sparsity, "sparsity", argc, argv);
 
+    int blockSize = 256;
+    chCommandLineGet<int>(&blockSize, "blockSize", argc, argv);
+
     // Generate bitmask
     long *d_bitmask;
     cudaMalloc(&d_bitmask, static_cast<size_t>(treeSize));
@@ -154,13 +157,71 @@ int main(int argc, char *argv[])
     // Select implementation based on command line parameters
     std::unique_ptr<EncodingBase> implementation;
     if (chCommandLineGetBool("dynamicExclusive", argc, argv)) {
-        implementation = std::make_unique<DynamicExclusive<1024>>();
+        switch (blockSize){
+            case 32:
+                implementation = std::make_unique<DynamicExclusive<32>>(); break;
+            case 64:
+                implementation = std::make_unique<DynamicExclusive<64>>(); break;
+            case 128:
+                implementation = std::make_unique<DynamicExclusive<128>>(); break;
+            case 256:
+                implementation = std::make_unique<DynamicExclusive<256>>(); break;
+            case 512:
+                implementation = std::make_unique<DynamicExclusive<512>>(); break;
+            case 1024:
+                implementation = std::make_unique<DynamicExclusive<1024>>(); break;
+            default:
+                throw std::invalid_argument( "Block size is not allowed! Allowed block sizes are: 32, 64, 128, 256, 512, 1024" );
+        }
     } else if (chCommandLineGetBool("dynamicExclusiveSolo", argc, argv)) {
-        implementation = std::make_unique<DynamicExclusive<1024>>(false);
+        switch (blockSize){
+            case 32:
+                implementation = std::make_unique<DynamicExclusive<32>>(false); break;
+            case 64:
+                implementation = std::make_unique<DynamicExclusive<64>>(false); break;
+            case 128:
+                implementation = std::make_unique<DynamicExclusive<128>>(false); break;
+            case 256:
+                implementation = std::make_unique<DynamicExclusive<256>>(false); break;
+            case 512:
+                implementation = std::make_unique<DynamicExclusive<512>>(false); break;
+            case 1024:
+                implementation = std::make_unique<DynamicExclusive<1024>>(false); break;
+            default:
+                throw std::invalid_argument( "Block size is not allowed! Allowed block sizes are: 32, 64, 128, 256, 512, 1024" );
+        }
     } else if (chCommandLineGetBool("fixedInclusive", argc, argv)) {
-        implementation = std::make_unique<FixedInclusive<512,7,8>>();
+        switch (blockSize){
+            case 32:
+                implementation = std::make_unique<FixedInclusive<32,7,8>>(); break;
+            case 64:
+                implementation = std::make_unique<FixedInclusive<64,7,8>>(); break;
+            case 128:
+                implementation = std::make_unique<FixedInclusive<128,7,8>>(); break;
+            case 256:
+                implementation = std::make_unique<FixedInclusive<256,7,8>>(); break;
+            case 512:
+                implementation = std::make_unique<FixedInclusive<512,7,8>>(); break;
+            default:
+                throw std::invalid_argument( "Block size is not allowed! Allowed block sizes are: 32, 64, 128, 256, 512" );
+        }
     } else if (chCommandLineGetBool("fixedExclusive", argc, argv)) {
-        implementation = std::make_unique<FixedExclusive<1024,8,8>>();
+        switch (blockSize){
+            case 32:
+                implementation = std::make_unique<FixedExclusive<32,8,8>>(); break;
+            case 64:
+                implementation = std::make_unique<FixedExclusive<64,8,8>>(); break;
+            case 128:
+                implementation = std::make_unique<FixedExclusive<128,8,8>>(); break;
+            case 256:
+                implementation = std::make_unique<FixedExclusive<256,8,8>>(); break;
+            case 512:
+                implementation = std::make_unique<FixedExclusive<512,8,8>>(); break;
+            case 1024:
+                implementation = std::make_unique<FixedExclusive<1024,8,8>>(); break;
+            default:
+                throw std::invalid_argument( "Block size is not allowed! Allowed block sizes are: 32, 64, 128, 256, 512, 1024" );
+        }
     } else if (chCommandLineGetBool("baseline", argc, argv)) {
         implementation = std::make_unique<ThrustBaseline>(packedSize);
     } else if (chCommandLineGetBool("baselineSetupLess", argc, argv)) {
