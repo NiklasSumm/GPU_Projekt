@@ -146,8 +146,8 @@ int main(int argc, char *argv[])
     // All implementations
     DynamicExclusive<1024> dynamicExclusive = DynamicExclusive<1024>();
     DynamicExclusive<1024> dynamicExclusiveSolo = DynamicExclusive<1024>(false);
-    FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};
-    FixedExclusive<1024,6,5> fixedExclusive = FixedExclusive<1024,6,5>{};
+    FixedInclusive<512,7,6> fixedInclusive = FixedInclusive<512,7,6>{};
+    FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
     ThrustBaseline baseline = ThrustBaseline(packedSize);
     ThrustBaseline baselineSetupLess = ThrustBaseline();
 
