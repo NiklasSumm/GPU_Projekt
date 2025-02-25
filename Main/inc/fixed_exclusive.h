@@ -5,7 +5,7 @@ template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
 setupKernelFixedExclusive(int numElements, uint64_t *input)
 {
-    int print_id = 32768;
+    int print_id = 32767;
 
 	int iterations = (((1 << (layer1Size - 6)) * (1 << layer2Size)) + blockDim.x - 1) / blockDim.x;
 
@@ -29,7 +29,6 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
 
         // Collectively compute the block-wide inclusive sum
         BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, prefix_op);
-		__syncthreads();
 
 		// Every fourth thread writes value in first layer
 		if (((threadIdx.x & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements) && (threadIdx.x < (1 << (layer1Size + layer2Size - 6)))) {
