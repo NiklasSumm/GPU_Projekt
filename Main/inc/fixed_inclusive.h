@@ -1,5 +1,4 @@
 #include <cub/cub.cuh>
-#include <block_prefix_callback_op.h>
 #include <encodingBase.h>
 
 template <int blockSize, int layer1Size, int layer2Size>
