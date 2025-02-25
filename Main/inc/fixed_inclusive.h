@@ -14,29 +14,30 @@ setupKernelFixedInclusive(int numElements, uint64_t *input)
 
     unsigned int elementId;
     unsigned int thread_data;
+    if (threadIdx.x < (1 << (layer1Size + layer2Size - 6))){
+        for (int i = 0; i < iterations; i++) {
+            elementId = blockIdx.x * ((1 << (layer1Size - 6)) * (1 << layer2Size)) + i * blockDim.x + threadIdx.x;
 
-    for (int i = 0; i < iterations; i++) {
-        elementId = blockIdx.x * ((1 << (layer1Size - 6)) * (1 << layer2Size)) + i * blockDim.x + threadIdx.x;
+            // Load 64 bit bitmask section and count bits
+            if (elementId < numElements)
+                thread_data = __popcll(input[elementId]);
+            else
+                thread_data = 0;
 
-        // Load 64 bit bitmask section and count bits
-        if (elementId < numElements)
-            thread_data = __popcll(input[elementId]);
-        else
-            thread_data = 0;
+            // Collectively compute the block-wide inclusive sum
+            BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, prefix_op);
 
-        // Collectively compute the block-wide inclusive sum
-        BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, prefix_op);
-
-        // Every second thread writes value in first layer
-        if ((((threadIdx.x + 1) & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements) && (threadIdx.x < (1 << (layer1Size + layer2Size - 6)))) {
-            reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(1 << (layer1Size - 6))] = static_cast<unsigned short>(thread_data);
+            // Every second thread writes value in first layer
+            if ((((threadIdx.x + 1) & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
+                reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(1 << (layer1Size - 6))] = static_cast<unsigned short>(thread_data);
+            }
         }
-    }
 
-    // Last thread of each full block writes into layer 2
-    if ((threadIdx.x == blockDim.x - 1) && ((elementId < numElements) || (threadIdx.x == ((1 << (layer1Size + layer2Size - 6))- 1)))) {
-        int offset = numElements*2 + ((numElements+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
-        reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data;
+        // Last thread of each full block writes into layer 2
+        if (((threadIdx.x == blockDim.x - 1) || (threadIdx.x == ((1 << (layer1Size + layer2Size - 6))- 1))) && (elementId < numElements)) {
+            int offset = numElements*2 + ((numElements+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
+            reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data;
+        }
     }
 }
 
