@@ -8,16 +8,13 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
 {
 	int iterations = (((1 << (layer1Size - 6)) * (1 << layer2Size)) + blockDim.x - 1) / blockDim.x;
 
-    //unsigned int aggregateSum = 0;
-    //unsigned int aggregate = 0;
-
     using BlockScan = cub::BlockScan<unsigned int, blockSize>;
     __shared__ typename BlockScan::TempStorage temp_storage;
 
     BlockPrefixCallbackOp prefix_op(0);
 
-    unsigned int elementId = 0;
-    unsigned int original_data = 0;
+    unsigned int elementId;
+    unsigned int original_data;
     unsigned int thread_data;
 
 	for (int i = 0; i < iterations; i++) {
@@ -31,15 +28,11 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
 
         // Collectively compute the block-wide inclusive sum
         BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, prefix_op);
-	__syncthreads();
 
 		// Every fourth thread writes value in first layer
 		if (((threadIdx.x & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
 			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/((1 << (layer1Size - 6)))] = static_cast<unsigned short>(thread_data);
 		}
-
-        // Accumulate the aggregate for the next iteration of the loop
-        //aggregateSum += aggregate;
     }
 
 	// Last thread of each full block writes into layer 2
