@@ -31,7 +31,7 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
         BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, prefix_op);
 
 		// Every fourth thread writes value in first layer
-		if (((threadIdx.x & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
+		if (((threadIdx.x & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements) && (threadIdx.x << (1 << (layer1Size + layer2Size - 6)))) {
 			reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/((1 << (layer1Size - 6)))] = static_cast<unsigned short>(thread_data);
 		}
     }
