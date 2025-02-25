@@ -5,7 +5,7 @@ template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
 setupKernelFixedExclusive(int numElements, uint64_t *input)
 {
-    int print_id = 2031616;
+    int print_id = 131072;
 
 	int iterations = (((1 << (layer1Size - 6)) * (1 << layer2Size)) + blockDim.x - 1) / blockDim.x;
 
