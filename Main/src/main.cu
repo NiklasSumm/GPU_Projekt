@@ -144,27 +144,27 @@ int main(int argc, char *argv[])
     cudaMalloc(&d_permutation, static_cast<size_t>(packedSize*sizeof(int)));
 
     // All implementations
-    DynamicExclusive<1024> dynamicExclusive = DynamicExclusive<1024>();
-    DynamicExclusive<1024> dynamicExclusiveSolo = DynamicExclusive<1024>(false);
-    FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};
-    FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
-    ThrustBaseline baseline = ThrustBaseline(packedSize);
-    ThrustBaseline baselineSetupLess = ThrustBaseline();
+    //DynamicExclusive<1024> dynamicExclusive = DynamicExclusive<1024>();
+    //DynamicExclusive<1024> dynamicExclusiveSolo = DynamicExclusive<1024>(false);
+    //FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};
+    //FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
+    //ThrustBaseline baseline = ThrustBaseline(packedSize);
+    //ThrustBaseline baselineSetupLess = ThrustBaseline();
 
     // Select implementation based on command line parameters
     EncodingBase* implementation;
     if (chCommandLineGetBool("dynamicExclusive", argc, argv)) {
-        implementation = &dynamicExclusive;
+        implementation = DynamicExclusive<1024> dynamicExclusive = DynamicExclusive<1024>();//&dynamicExclusive;
     } else if (chCommandLineGetBool("dynamicExclusiveSolo", argc, argv)) {
-        implementation = &dynamicExclusiveSolo;
+        implementation = DynamicExclusive<1024> dynamicExclusiveSolo = DynamicExclusive<1024>(false);//&dynamicExclusiveSolo;
     } else if (chCommandLineGetBool("fixedInclusive", argc, argv)) {
-        implementation = &fixedInclusive;
+        implementation = FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};//&fixedInclusive;
     } else if (chCommandLineGetBool("fixedExclusive", argc, argv)) {
-        implementation = &fixedExclusive;
+        implementation = FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};//&fixedExclusive;
     } else if (chCommandLineGetBool("baseline", argc, argv)) {
-        implementation = &baseline;
+        implementation = ThrustBaseline(packedSize);//&baseline;
     } else if (chCommandLineGetBool("baselineSetupLess", argc, argv)) {
-        implementation = &baselineSetupLess;
+        implementation = ThrustBaseline()//&baselineSetupLess;
     } else {
         exit(1);
     }
