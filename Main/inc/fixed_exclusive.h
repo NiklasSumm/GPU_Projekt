@@ -27,10 +27,11 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
         if (elementId < numElements)
             original_data = __popcll(input[elementId]);
         else
-            original_data;
+            original_data = 0;
 
         // Collectively compute the block-wide inclusive sum
         BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, prefix_op);
+	__syncthreads();
 
 		// Every fourth thread writes value in first layer
 		if (((threadIdx.x & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
