@@ -145,5 +145,3 @@ chCommandLineGet( chShmooRange *range, const char *keyword, int argc, char *argv
 #endif // __CUDAHANDBOOK_SHMOO__
 
 #endif
-
-

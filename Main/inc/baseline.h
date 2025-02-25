@@ -8,6 +8,8 @@
 #include <thrust/count.h>
 #include <thrust/for_each.h>
 #include <thrust/sequence.h>
+#include <thrust/gather.h>
+#include <thrust/scatter.h>
 
 #include <encodingBase.h>
 
@@ -58,49 +60,74 @@ struct fetch_write
 };
 
 class ThrustBaseline : public EncodingBase {
-	private:
-		uint64_t *d_bitmask;
-		int n;
-	
-	public:
-		void setup(uint64_t *d_bitmask, int n) {
-			this->d_bitmask = d_bitmask;
-			this->n = n;
-		};
+    private:
+        int packedSize;
+        uint32_t *d_inverse_permutation;
+        uint64_t *d_bitmask;
+        int n;
+        bool setupLess = false;
 
-		void apply(int *permutation, int packedSize) {
-            UNUSED(packedSize);
+    public:
+        ThrustBaseline(int packedSize) {
+            this->packedSize = packedSize;
+            cudaMalloc(&d_inverse_permutation, static_cast<size_t>(packedSize*sizeof(uint32_t)));
+        }
+        ThrustBaseline(): setupLess(true) {} // Implicitely switches to setup-less implementation
 
-            const auto bool_iter = make_mask2bool_iterator(d_bitmask);
-            const auto num_bools = num_bits<uint64_t>() * n;
+        void setup(uint64_t *d_bitmask, int n) {
+            if (!setupLess) {
+                const auto bool_iter = make_mask2bool_iterator(d_bitmask);
+                const auto num_bools = num_bits<uint64_t>() * n;
 
-            thrust::counting_iterator<int> iter(0);
-            thrust::copy_if(thrust::device, iter, iter + num_bools, bool_iter, permutation, cuda::std::identity{});
-		};
+                thrust::counting_iterator<int> iter(0);
+                thrust::copy_if(thrust::device, iter, iter + num_bools, bool_iter, d_inverse_permutation, cuda::std::identity{});
+            }
+
+            this->d_bitmask = d_bitmask;
+            this->n = n;
+        };
+
+        void apply(int *permutation, int packedSize) {
+            if (!setupLess) {
+                cudaMemcpy(permutation, d_inverse_permutation, static_cast<size_t>(packedSize * sizeof(uint32_t)), cudaMemcpyDeviceToDevice);
+            } else {
+                // Setup-less
+                const auto bool_iter = make_mask2bool_iterator(d_bitmask);
+                const auto num_bools = num_bits<uint64_t>() * n;
+
+                thrust::counting_iterator<int> iter(0);
+                thrust::copy_if(thrust::device, iter, iter + num_bools, bool_iter, permutation, cuda::std::identity{});
+            }
+        };
 
         void pack(int *src, int *dst, int packedSize) {
-            UNUSED(packedSize);
+            if (!setupLess) {
+                thrust::gather(d_inverse_permutation, d_inverse_permutation + packedSize, src, dst);
+            } else {
+                const auto bool_iter = make_mask2bool_iterator(d_bitmask);
+                const auto num_bools = num_bits<uint64_t>() * n;
 
-            const auto bool_iter = make_mask2bool_iterator(d_bitmask);
-            const auto num_bools = num_bits<uint64_t>() * n;
-
-            thrust::copy_if(thrust::device, src, src + num_bools, bool_iter, dst, cuda::std::identity{});
+                thrust::copy_if(thrust::device, src, src + num_bools, bool_iter, dst, cuda::std::identity{});
+            }
         };
 
         void unpack(int *src, int *dst, int packedSize) {
-            UNUSED(packedSize);
+            if (!setupLess) {
+                thrust::scatter(src, src + packedSize, d_inverse_permutation, dst);
+            } else {
+                const auto bool_iter = make_mask2bool_iterator(d_bitmask);
+                const auto num_bools = num_bits<uint64_t>() * n;
 
-            const auto bool_iter = make_mask2bool_iterator(d_bitmask);
-            const auto num_bools = num_bits<uint64_t>() * n;
+                auto tabulate_it = thrust::make_tabulate_output_iterator(fetch_write{dst, src});
 
-            auto tabulate_it = thrust::make_tabulate_output_iterator(fetch_write{dst, src});
-
-            thrust::counting_iterator<int> iter(0);
-            thrust::copy_if(thrust::device, iter, iter + num_bools, bool_iter, tabulate_it, cuda::std::identity{});
+                thrust::counting_iterator<int> iter(0);
+                thrust::copy_if(thrust::device, iter, iter + num_bools, bool_iter, tabulate_it, cuda::std::identity{});
+            }
         };
-	
-		void print(uint64_t *h_bitmask) {
+
+        void print(uint64_t *h_bitmask) {
             UNUSED(h_bitmask);
-			// Nothing to print
-		};
+            // Nothing to print
+        };
 };
+

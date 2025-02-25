@@ -31,6 +31,18 @@ public:
 	//
 	double 
 	getBandwidth(double size) { return chTimerBandwidth( &m_start, &m_end, size); };
+
+	//
+	// Overload + operator to support combining multiple timers
+	//
+    ChTimer operator+(ChTimer const& obj) {
+        ChTimer res;
+        res.m_start = m_start;
+        res.m_end = m_end;
+		res.m_end.tv_sec += (obj.m_end.tv_sec - obj.m_start.tv_sec);
+		res.m_end.tv_nsec += (obj.m_end.tv_nsec - obj.m_start.tv_nsec);
+        return res;
+    }
 	
 
 private:
