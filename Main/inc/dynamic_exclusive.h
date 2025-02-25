@@ -435,9 +435,9 @@ class DynamicExclusive : public EncodingBase {
             }
 
             if (collab) {
-                applyDynamicExclusive_warpShuffle<<<(packedSize+127)/128, 128>>>(packedSize, dst, src, n, ts, unpack);
+                applyDynamicExclusive_warpShuffle<<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, unpack);
             } else {
-                applyDynamicExclusive<<<(packedSize+127)/128, 128>>>(packedSize, dst, src, n, ts, unpack);
+                applyDynamicExclusive<<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, unpack);
             }
         }
 
