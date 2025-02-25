@@ -5,6 +5,8 @@ template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
 setupKernelFixedExclusive(int numElements, uint64_t *input)
 {
+    int print_id = 2031616;
+
 	int iterations = (((1 << (layer1Size - 6)) * (1 << layer2Size)) + blockDim.x - 1) / blockDim.x;
 
     using BlockScan = cub::BlockScan<unsigned int, blockSize>;
@@ -34,10 +36,19 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
 		}
     }
 
+    if (elementId == print_id){
+        printf("1---------------\n");
+    }
+
 	// Last thread of each full block writes into layer 2
 	if (((threadIdx.x == blockDim.x - 1) || (threadIdx.x == ((1 << (layer1Size + layer2Size - 6))- 1))) && (elementId < numElements)) {
 		int offset = numElements*2 + ((numElements+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
 		reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
+
+        if (elementId == print_id){
+            printf("2--------------\n");
+        }
+
 	}
 }
 
