@@ -210,7 +210,7 @@ class FixedExclusive : public EncodingBase {
                 ts.layerSizes[layer] = layerSizeFixedExclusive<layer1Size,layer2Size>(layer, n);
             }
 
-            applyFixedExclusive<layer1Size, layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, permutation, nullptr, n, ts, false);
+            applyFixedExclusive<layer1Size, layer2Size><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, permutation, nullptr, n, ts, false);
         };
 
         void pack(int *src, int *dst, int packedSize) {
