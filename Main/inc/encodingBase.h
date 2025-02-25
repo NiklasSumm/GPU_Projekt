@@ -17,7 +17,7 @@ class TreeStructure {
         int layerSizes[5];
 };
 
-int getNextLargestPowerOf2(int num){
+__device__ int getNextLargestPowerOf2(int num){
     if (num & (num - 1)){
 		num |= num >> 1;
     	num |= num >> 2;
