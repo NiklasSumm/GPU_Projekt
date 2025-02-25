@@ -74,10 +74,10 @@ applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
 			while (searchStep > 1){
 				searchStep >>= 1;
 				int testIndex = min(searchIndex + searchStep, layerSize - 1);
-				searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
+				searchIndex += (static_cast<uint32_t>(layer2[testIndex]) < bitsToFind) * searchStep;
 			}
 			searchIndex = min(searchIndex, layerSize - 1);
-			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
+			uint32_t layerSum = static_cast<uint32_t>(layer2[searchIndex]);
 				
 			if (layerSum < bitsToFind) {
 				bitsToFind -= layerSum;
@@ -109,10 +109,10 @@ applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
 			while (searchStep > 1){
 				searchStep >>= 1;
 				int testIndex = min(searchIndex + searchStep, layerSize - 1);
-				searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
+				searchIndex += (static_cast<uint32_t>(layer1[testIndex]) < bitsToFind) * searchStep;
 			}
 			searchIndex = min(searchIndex, layerSize - 1);
-			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
+			uint32_t layerSum = static_cast<uint32_t>(layer1[searchIndex]);
 				
 			if (layerSum < bitsToFind) {
 				bitsToFind -= layerSum;
