@@ -1,4 +1,5 @@
 #include <cub/cub.cuh>
+#include <block_prefix_callback_op.h>
 #include <encodingBase.h>
 
 template <int blockSize, int layer1Size, int layer2Size>
@@ -13,7 +14,6 @@ setupKernelFixedInclusive(int numElements, uint64_t *input)
     BlockPrefixCallbackOp prefix_op(0);
 
     unsigned int elementId;
-    unsigned int original_data;
     unsigned int thread_data;
 
     for (int i = 0; i < iterations; i++) {
