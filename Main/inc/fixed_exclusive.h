@@ -197,6 +197,7 @@ class FixedExclusive : public EncodingBase {
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
             int gridSize = (n + ((1 << (layer1Size - 6)) * (1 << layer2Size)) - 1) / ((1 << (layer1Size - 6)) * (1 << layer2Size));
+            gridSize *= (blockSize + (1 << (layer2Size + layer1Size -6)) - 1) / (1 << (layer2Size + layer1Size -6));
 
             setupKernelFixedExclusive<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
 
