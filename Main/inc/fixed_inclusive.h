@@ -1,5 +1,6 @@
 #include <cub/cub.cuh>
 #include <encodingBase.h>
+#include <auxiliary_functions.h>
 
 template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
