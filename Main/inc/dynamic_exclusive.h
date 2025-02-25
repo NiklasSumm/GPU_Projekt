@@ -1,6 +1,7 @@
 #include <cub/cub.cuh>
 #include <block_prefix_callback_op.h>
 #include <encodingBase.h>
+#include <auxiliary_functions.h>
 
 
 template <int blockSize>
