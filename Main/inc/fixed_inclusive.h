@@ -28,13 +28,13 @@ setupKernelFixedInclusive(int numElements, uint64_t *input)
         BlockScan(temp_storage).InclusiveSum(thread_data, thread_data, prefix_op);
 
         // Every second thread writes value in first layer
-        if ((((threadIdx.x + 1) & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
+        if ((((threadIdx.x + 1) & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements) && (threadIdx.x < (1 << (layer1Size + layer2Size - 6)))) {
             reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/(1 << (layer1Size - 6))] = static_cast<unsigned short>(thread_data);
         }
     }
 
     // Last thread of each full block writes into layer 2
-    if ((threadIdx.x == blockDim.x - 1) && (elementId < numElements)) {
+    if ((threadIdx.x == blockDim.x - 1) && ((elementId < numElements) || (threadIdx.x == ((1 << (layer1Size + layer2Size - 6))- 1)))) {
         int offset = numElements*2 + ((numElements+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
         reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data;
     }
