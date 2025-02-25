@@ -58,7 +58,7 @@ applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
         if (layerSize > 1) {
             uint32_t *layer2 = &structure.layers[2][0];
 
-            int nextPowOf2 = layerSize;
+            int nextPowOf2 = cuda::std::bit_ceil<int>(layerSize);
 			if (nextPowOf2 & (nextPowOf2 - 1)){
 				nextPowOf2 |= nextPowOf2 >> 1;
     			nextPowOf2 |= nextPowOf2 >> 2;
