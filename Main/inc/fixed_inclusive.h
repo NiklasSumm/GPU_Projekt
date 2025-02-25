@@ -1,5 +1,6 @@
 #include <cub/cub.cuh>
 #include <encodingBase.h>
+#include <auxiliary_functions.h>
 
 template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
@@ -180,7 +181,7 @@ class FixedInclusive : public EncodingBase {
             ts.layerSizes[layer] = layerSizeFixedInclusive<layer1Size,layer2Size>(layer, n);
         }
 
-        applyFixedInclusive<layer1Size,layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, dst, src, n, ts, unpack);
+        applyFixedInclusive<layer1Size,layer2Size><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, unpack);
     }
 
     public:
