@@ -29,6 +29,7 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
 
         // Collectively compute the block-wide inclusive sum
         BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, prefix_op);
+        __syncthreads();
 
 		// Every fourth thread writes value in first layer
 		if (((threadIdx.x & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements) && (threadIdx.x < (1 << (layer1Size + layer2Size - 6)))) {
