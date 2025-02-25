@@ -108,10 +108,10 @@ applyFixedInclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
 				searchIndex -= (static_cast<uint32_t>(layer1[testIndex]) >= bitsToFind) * searchStep;
 			}
 			searchIndex = min(searchIndex, layerSize - 1);
-			uint32_t previousLayerSum = searchIndex > 0 ? static_cast<uint32_t>(layer1[searchIndex-1]) : 0;
 				
 			if (layerSum < bitsToFind) {
-				bitsToFind -= layerSum;
+                uint32_t previousLayerSum = searchIndex > 0 ? static_cast<uint32_t>(layer1[searchIndex-1]) : 0;
+				bitsToFind -= previousLayerSum;
 				nextLayerOffset += searchIndex;
 			}
             nextLayerOffset *= (1 << (layer1Size - 6));
