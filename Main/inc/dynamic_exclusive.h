@@ -104,11 +104,15 @@ applyDynamicExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeSt
 
         int nextLayerOffset = 0;
         for (int layerIdx = 4; layerIdx > 1; layerIdx--) {
+            // descend layers 4 - 2 using binary search
             int layerSize = structure.layerSizes[layerIdx] - nextLayerOffset;
             if (layerSize > 1) {
                 layerSize = min(layerSize, 32);
                 uint32_t *layer = &structure.layers[layerIdx][nextLayerOffset];
 
+                // to perform binary search on arbitrary layer size we assume size to be next largest power of 2
+                // this way we only have to check if the search index exceeds the upper bound of the range,
+                // while the lower bound (0) can't be exceeded
                 int nextPowOf2 = getNextLargestPowerOf2(layerSize);
 
 				int searchIndex = 0;
@@ -131,11 +135,13 @@ applyDynamicExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeSt
         }
 
         // Handle layer 1
+        // descend layer 1 using binary search
         int layerSize = structure.layerSizes[1] - nextLayerOffset;
         if (layerSize > 1) {
             layerSize = min(layerSize, 32);
             uint16_t *layer = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
 
+            // again for the binary search we asume size to be next largest power of 2 and then check if upper bound is exceeded
             int nextPowOf2 = getNextLargestPowerOf2(layerSize);
 
 			int searchIndex = 0;
@@ -256,24 +262,18 @@ bool traverseLayerCollab(uint32_t &bitsToFind, int &nextLayerOffset, T *layer, i
 template <typename T>
 __device__
 void traverseLayerSolo(uint32_t &bitsToFind, int &nextLayerOffset, T *layer, int layerSize) {
-    // Index and step for binary search
-    int searchIndex = layerSize / 2;
-    int searchStep = (layerSize + 1) / 2;
+    int nextPowOf2 = getNextLargestPowerOf2(layerSize);
 
-    uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
+    int searchIndex = 0;
+    int searchStep = nextPowOf2;
 
     while (searchStep > 1){
-        searchStep = (searchStep + 1) / 2;
-        searchIndex = (layerSum < bitsToFind) ? searchIndex + searchStep : searchIndex - searchStep;
-        searchIndex = (searchIndex < 0) ? 0 : ((searchIndex < layerSize) ? searchIndex : layerSize - 1);
-        layerSum = static_cast<uint32_t>(layer[searchIndex]);
+        searchStep >>= 1;
+        int testIndex = min(searchIndex + searchStep, layerSize - 1);
+        searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
     }
-    // After binary search we either landed on the correct value or the one above
-    // So we have to check if the result is correct and if not go to the value below
-    if ((layerSum >= bitsToFind) && (searchIndex > 0)){
-        searchIndex--;
-        layerSum = static_cast<uint32_t>(layer[searchIndex]);
-    }
+    searchIndex = min(searchIndex, layerSize - 1);
+    uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
 
     if (layerSum < bitsToFind) {
         bitsToFind -= layerSum;

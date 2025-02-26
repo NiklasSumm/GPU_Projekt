@@ -102,7 +102,7 @@ class ThrustBaseline : public EncodingBase {
 
         void pack(int *src, int *dst, int packedSize) {
             if (!setupLess) {
-                thrust::gather(d_inverse_permutation, d_inverse_permutation + packedSize, src, dst);
+                thrust::gather(thrust::device, d_inverse_permutation, d_inverse_permutation + packedSize, src, dst);
             } else {
                 const auto bool_iter = make_mask2bool_iterator(d_bitmask);
                 const auto num_bools = num_bits<uint64_t>() * n;
@@ -113,7 +113,7 @@ class ThrustBaseline : public EncodingBase {
 
         void unpack(int *src, int *dst, int packedSize) {
             if (!setupLess) {
-                thrust::scatter(src, src + packedSize, d_inverse_permutation, dst);
+                thrust::scatter(thrust::device, src, src + packedSize, d_inverse_permutation, dst);
             } else {
                 const auto bool_iter = make_mask2bool_iterator(d_bitmask);
                 const auto num_bools = num_bits<uint64_t>() * n;

@@ -1,10 +1,15 @@
 #include <cub/cub.cuh>
 #include <encodingBase.h>
 
+
+//layer1- and layer2Size as power of 2 => layer1Size = 8 means one value of layer 1 accumulates 2^8 bits from the bit mask
 template <int blockSize, int layer1Size, int layer2Size>
 __global__ void
 setupKernelFixedExclusive(int numElements, uint64_t *input)
 {
+    // Number of longs per layer two entry devided by block size
+    // Shift operators are used to get power of two
+    // layer1Size - 6  since one long already contains 2^6 bit
 	int iterations = (((1 << (layer1Size - 6)) * (1 << layer2Size)) + blockDim.x - 1) / blockDim.x;
 
     using BlockScan = cub::BlockScan<unsigned int, blockSize>;
@@ -16,7 +21,8 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
     unsigned int original_data;
     unsigned int thread_data;
 
-    if (threadIdx.x < (1 << (layer1Size + layer2Size - 6))){
+    if (threadIdx.x < (1 << (layer1Size + layer2Size - 6))) //if there are more threads than needed, some wont perform any calculations
+    {
 	    for (int i = 0; i < iterations; i++) {
 	    	elementId = blockIdx.x * ((1 << (layer1Size - 6)) * (1 << layer2Size)) + i * blockDim.x + threadIdx.x;
 
@@ -30,13 +36,13 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
             BlockScan(temp_storage).ExclusiveSum(original_data, thread_data, prefix_op);
             __syncthreads();
 
-	    	// Every fourth thread writes value in first layer
+	    	// Depending on layer size, every n-th thread writes to layer 1
 	    	if (((threadIdx.x & ((1 << (layer1Size - 6)) - 1)) == 0) && (elementId < numElements)) {
 	    		reinterpret_cast<unsigned short*>(input)[numElements*4+elementId/((1 << (layer1Size - 6)))] = static_cast<unsigned short>(thread_data);
 	    	}
         }
 
-	    // Last thread of each full block writes into layer 2
+	    // Last active thread of each full block writes into layer 2
 	    if (((threadIdx.x == blockDim.x - 1) || (threadIdx.x == ((1 << (layer1Size + layer2Size - 6))- 1))) && (elementId < numElements)) {
 	    	int offset = numElements*2 + ((numElements+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
 	    	reinterpret_cast<unsigned int*>(input)[offset+blockIdx.x] = thread_data + original_data;
@@ -53,11 +59,15 @@ applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
     if (elementIdx < numPacked) {
         uint32_t bitsToFind = elementIdx+1;
 
+        // descend layer 2 using binary search
         int nextLayerOffset = 0;
         int layerSize = structure.layerSizes[2];
         if (layerSize > 1) {
             uint32_t *layer2 = &structure.layers[2][0];
 
+            // to perform binary search on arbitrary layer size we assume size to be next largest power of 2
+            // this way we only have to check if the search index exceeds the upper bound of the range,
+            // while the lower bound (0) can't be exceeded
             int nextPowOf2 = getNextLargestPowerOf2(layerSize);
 
 			int searchIndex = 0;
@@ -79,12 +89,14 @@ applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
 		}
 
         // Handle layer 1
+        // descend layer 1 using binary search
         layerSize = (structure.layerSizes[1] + structure.layerSizes[2] - 1) / structure.layerSizes[2];
 
         if (layerSize > 1) {
             layerSize = min(layerSize, structure.layerSizes[1] - nextLayerOffset);
             uint16_t *layer1 = &reinterpret_cast<uint16_t *>(structure.layers[1])[nextLayerOffset];
 
+            // again for the binary search we asume size to be next largest power of 2 and then check if upper bound is exceeded
             int nextPowOf2 = getNextLargestPowerOf2(layerSize);
 
 			int searchIndex = 0;
@@ -178,10 +190,15 @@ class FixedExclusive : public EncodingBase {
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
+            // gridSize = n devided by number of longs each block handles
             int gridSize = (n + ((1 << (layer1Size - 6)) * (1 << layer2Size)) - 1) / ((1 << (layer1Size - 6)) * (1 << layer2Size));
 
             setupKernelFixedExclusive<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
 
+            // offset for layer 2 in number of ints => bitmask size + layer 1 size
+            // bitmarks size n * 2 since n is number of longs
+            // + 
+            // n devided by number of longs per layer 1 entry devided by 2 (-> since layer 1 is in shorts)
 	        int offset = n*2 + ((n+(1 << (layer1Size - 6))-1)/(1 << (layer1Size - 6)) + 1)/2;
             int size = gridSize;
             uint32_t *startPtr = &reinterpret_cast<uint32_t*>(d_bitmask)[offset];
@@ -196,6 +213,9 @@ class FixedExclusive : public EncodingBase {
 
             // Run exclusive prefix sum
             cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
+
+            // Free temporary storage
+            cudaFree(d_temp_storage);
 
             this->d_bitmask = d_bitmask;
             this->n = n;
@@ -222,7 +242,7 @@ class FixedExclusive : public EncodingBase {
                 ts.layerSizes[layer] = layerSizeFixedExclusive<layer1Size, layer2Size>(layer, n);
             }
 
-            applyFixedExclusive<layer1Size, layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, dst, src, n, ts, false);
+            applyFixedExclusive<layer1Size, layer2Size><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, false);
         };
 
         void unpack(int *src, int *dst, int packedSize) {
@@ -234,7 +254,7 @@ class FixedExclusive : public EncodingBase {
                 ts.layerSizes[layer] = layerSizeFixedExclusive<layer1Size, layer2Size>(layer, n);
             }
 
-            applyFixedExclusive<layer1Size, layer2Size><<<(packedSize+127)/128, 128>>>(packedSize, dst, src, n, ts, true);
+            applyFixedExclusive<layer1Size, layer2Size><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, true);
         };
 
         void print(uint64_t *h_bitmask) {

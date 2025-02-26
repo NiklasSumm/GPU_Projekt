@@ -127,6 +127,15 @@ int main(int argc, char *argv[])
     int blockSize = 256;
     chCommandLineGet<int>(&blockSize, "blockSize", argc, argv);
 
+    int layer1Size = 8;
+    if (chCommandLineGetBool("fixedInclusive", argc, argv)) {
+        layer1Size = 7;
+    }
+    chCommandLineGet<int>(&layer1Size, "layer1Size", argc, argv);
+
+    int layer2Size = 8;
+    chCommandLineGet<int>(&layer2Size, "layer2Size", argc, argv);
+
     // Generate bitmask
     long *d_bitmask;
     cudaMalloc(&d_bitmask, static_cast<size_t>(treeSize));
@@ -145,14 +154,6 @@ int main(int argc, char *argv[])
     // Alloc result array. For now we produce a full permutation, which can easily be extended to map data.
     int* d_permutation;
     cudaMalloc(&d_permutation, static_cast<size_t>(packedSize*sizeof(int)));
-
-    // All implementations
-    //DynamicExclusive<1024> dynamicExclusive = DynamicExclusive<1024>();
-    //DynamicExclusive<1024> dynamicExclusiveSolo = DynamicExclusive<1024>(false);
-    //FixedInclusive<512,7,8> fixedInclusive = FixedInclusive<512,7,8>{};
-    //FixedExclusive<1024,8,8> fixedExclusive = FixedExclusive<1024,8,8>{};
-    //ThrustBaseline baseline = ThrustBaseline(packedSize);
-    //ThrustBaseline baselineSetupLess = ThrustBaseline();
 
     // Select implementation based on command line parameters
     std::unique_ptr<EncodingBase> implementation;
@@ -193,17 +194,180 @@ int main(int argc, char *argv[])
     } else if (chCommandLineGetBool("fixedInclusive", argc, argv)) {
         switch (blockSize){
             case 32:
-                implementation = std::make_unique<FixedInclusive<32,7,8>>(); break;
+                implementation = std::make_unique<FixedInclusive<32,8,8>>(); break;
             case 64:
-                implementation = std::make_unique<FixedInclusive<64,7,8>>(); break;
+                implementation = std::make_unique<FixedInclusive<64,8,8>>(); break;
             case 128:
-                implementation = std::make_unique<FixedInclusive<128,7,8>>(); break;
+                switch (layer2Size){
+                    case 0:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedInclusive<128,6,0>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedInclusive<128,7,0>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedInclusive<128,8,0>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedInclusive<128,9,0>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedInclusive<128,10,0>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedInclusive<128,11,0>>(); break;
+                            case 12:
+                                implementation = std::make_unique<FixedInclusive<128,12,0>>(); break;
+                            case 13:
+                                implementation = std::make_unique<FixedInclusive<128,13,0>>(); break;
+                            case 14:
+                                implementation = std::make_unique<FixedInclusive<128,14,0>>(); break;
+                            case 15:
+                                implementation = std::make_unique<FixedInclusive<128,15,0>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 0 allowed layer1 sizes are: 6 - 15" );
+                        } break;
+                    case 1:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedInclusive<128,6,1>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedInclusive<128,7,1>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedInclusive<128,8,1>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedInclusive<128,9,1>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedInclusive<128,10,1>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedInclusive<128,11,1>>(); break;
+                            case 12:
+                                implementation = std::make_unique<FixedInclusive<128,12,1>>(); break;
+                            case 13:
+                                implementation = std::make_unique<FixedInclusive<128,13,1>>(); break;
+                            case 14:
+                                implementation = std::make_unique<FixedInclusive<128,14,1>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 1 allowed layer1 sizes are: 6 - 14" );
+                        } break;
+                    case 2:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedInclusive<128,6,2>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedInclusive<128,7,2>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedInclusive<128,8,2>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedInclusive<128,9,2>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedInclusive<128,10,2>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedInclusive<128,11,2>>(); break;
+                            case 12:
+                                implementation = std::make_unique<FixedInclusive<128,12,2>>(); break;
+                            case 13:
+                                implementation = std::make_unique<FixedInclusive<128,13,2>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 2 allowed layer1 sizes are: 6 - 13" );
+                        } break;
+                    case 3:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedInclusive<128,6,3>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedInclusive<128,7,3>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedInclusive<128,8,3>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedInclusive<128,9,3>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedInclusive<128,10,3>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedInclusive<128,11,3>>(); break;
+                            case 12:
+                                implementation = std::make_unique<FixedInclusive<128,12,3>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 3 allowed layer1 sizes are: 6 - 12" );
+                        } break;
+                    case 4:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedInclusive<128,6,4>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedInclusive<128,7,4>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedInclusive<128,8,4>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedInclusive<128,9,4>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedInclusive<128,10,4>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedInclusive<128,11,4>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 4 allowed layer1 sizes are: 6 - 11" );
+                        } break;
+                    case 5:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedInclusive<128,6,5>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedInclusive<128,7,5>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedInclusive<128,8,5>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedInclusive<128,9,5>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedInclusive<128,10,5>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 5 allowed layer1 sizes are: 6 - 10" );
+                        } break;
+                    case 6:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedInclusive<128,6,6>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedInclusive<128,7,6>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedInclusive<128,8,6>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedInclusive<128,9,6>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 6 allowed layer1 sizes are: 6 - 9" );
+                        } break;
+                    case 7:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedInclusive<128,6,7>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedInclusive<128,7,7>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedInclusive<128,8,7>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 7 allowed layer1 sizes are: 6 - 8" );
+                        } break;
+                    case 8:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedInclusive<128,6,8>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedInclusive<128,7,8>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 8 allowed layer1 sizes are: 6 - 7" );
+                        } break;
+                    case 9:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedInclusive<128,6,9>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 9 allowed layer1 sizes are: 6 - 6" );
+                        } break;
+                    default:
+                        throw std::invalid_argument( "Size for layer 2 is not allowed! Allowed sizes are: 0 - 10" );
+                } break;
             case 256:
-                implementation = std::make_unique<FixedInclusive<256,7,8>>(); break;
+                implementation = std::make_unique<FixedInclusive<256,8,8>>(); break;
             case 512:
-                implementation = std::make_unique<FixedInclusive<512,7,8>>(); break;
+                implementation = std::make_unique<FixedInclusive<512,8,8>>(); break;
             default:
-                throw std::invalid_argument( "Block size is not allowed! Allowed block sizes are: 32, 64, 128, 256, 512" );
+                throw std::invalid_argument( "Block size is not allowed! Allowed block sizes are: 32, 64, 128, 256, 512, 1024" );
         }
     } else if (chCommandLineGetBool("fixedExclusive", argc, argv)) {
         switch (blockSize){
@@ -212,7 +376,197 @@ int main(int argc, char *argv[])
             case 64:
                 implementation = std::make_unique<FixedExclusive<64,8,8>>(); break;
             case 128:
-                implementation = std::make_unique<FixedExclusive<128,8,8>>(); break;
+                switch (layer2Size){
+                    case 0:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,0>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedExclusive<128,7,0>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedExclusive<128,8,0>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedExclusive<128,9,0>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedExclusive<128,10,0>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedExclusive<128,11,0>>(); break;
+                            case 12:
+                                implementation = std::make_unique<FixedExclusive<128,12,0>>(); break;
+                            case 13:
+                                implementation = std::make_unique<FixedExclusive<128,13,0>>(); break;
+                            case 14:
+                                implementation = std::make_unique<FixedExclusive<128,14,0>>(); break;
+                            case 15:
+                                implementation = std::make_unique<FixedExclusive<128,15,0>>(); break;
+                            case 16:
+                                implementation = std::make_unique<FixedExclusive<128,16,0>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 0 allowed layer1 sizes are: 6 - 16" );
+                        } break;
+                    case 1:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,1>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedExclusive<128,7,1>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedExclusive<128,8,1>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedExclusive<128,9,1>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedExclusive<128,10,1>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedExclusive<128,11,1>>(); break;
+                            case 12:
+                                implementation = std::make_unique<FixedExclusive<128,12,1>>(); break;
+                            case 13:
+                                implementation = std::make_unique<FixedExclusive<128,13,1>>(); break;
+                            case 14:
+                                implementation = std::make_unique<FixedExclusive<128,14,1>>(); break;
+                            case 15:
+                                implementation = std::make_unique<FixedExclusive<128,15,1>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 1 allowed layer1 sizes are: 6 - 15" );
+                        } break;
+                    case 2:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,2>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedExclusive<128,7,2>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedExclusive<128,8,2>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedExclusive<128,9,2>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedExclusive<128,10,2>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedExclusive<128,11,2>>(); break;
+                            case 12:
+                                implementation = std::make_unique<FixedExclusive<128,12,2>>(); break;
+                            case 13:
+                                implementation = std::make_unique<FixedExclusive<128,13,2>>(); break;
+                            case 14:
+                                implementation = std::make_unique<FixedExclusive<128,14,2>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 2 allowed layer1 sizes are: 6 - 14" );
+                        } break;
+                    case 3:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,3>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedExclusive<128,7,3>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedExclusive<128,8,3>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedExclusive<128,9,3>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedExclusive<128,10,3>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedExclusive<128,11,3>>(); break;
+                            case 12:
+                                implementation = std::make_unique<FixedExclusive<128,12,3>>(); break;
+                            case 13:
+                                implementation = std::make_unique<FixedExclusive<128,13,3>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 3 allowed layer1 sizes are: 6 - 13" );
+                        } break;
+                    case 4:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,4>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedExclusive<128,7,4>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedExclusive<128,8,4>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedExclusive<128,9,4>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedExclusive<128,10,4>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedExclusive<128,11,4>>(); break;
+                            case 12:
+                                implementation = std::make_unique<FixedExclusive<128,12,4>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 4 allowed layer1 sizes are: 6 - 12" );
+                        } break;
+                    case 5:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,5>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedExclusive<128,7,5>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedExclusive<128,8,5>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedExclusive<128,9,5>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedExclusive<128,10,5>>(); break;
+                            case 11:
+                                implementation = std::make_unique<FixedExclusive<128,11,5>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 5 allowed layer1 sizes are: 6 - 11" );
+                        } break;
+                    case 6:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,6>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedExclusive<128,7,6>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedExclusive<128,8,6>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedExclusive<128,9,6>>(); break;
+                            case 10:
+                                implementation = std::make_unique<FixedExclusive<128,10,6>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 6 allowed layer1 sizes are: 6 - 10" );
+                        } break;
+                    case 7:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,7>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedExclusive<128,7,7>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedExclusive<128,8,7>>(); break;
+                            case 9:
+                                implementation = std::make_unique<FixedExclusive<128,9,7>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 7 allowed layer1 sizes are: 6 - 9" );
+                        } break;
+                    case 8:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,8>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedExclusive<128,7,8>>(); break;
+                            case 8:
+                                implementation = std::make_unique<FixedExclusive<128,8,8>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 8 allowed layer1 sizes are: 6 - 8" );
+                        } break;
+                    case 9:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,9>>(); break;
+                            case 7:
+                                implementation = std::make_unique<FixedExclusive<128,7,9>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 9 allowed layer1 sizes are: 6 - 7" );
+                        } break;
+                    case 10:
+                        switch (layer1Size){
+                            case 6:
+                                implementation = std::make_unique<FixedExclusive<128,6,10>>(); break;
+                            default:
+                                throw std::invalid_argument( "Size for layer 1 is not allowed! For layer 2 size of 10 allowed layer1 sizes are: 6 - 6" );
+                        } break;
+                    default:
+                        throw std::invalid_argument( "Size for layer 2 is not allowed! Allowed sizes are: 0 - 10" );
+                } break;
             case 256:
                 implementation = std::make_unique<FixedExclusive<256,8,8>>(); break;
             case 512:
@@ -230,15 +584,28 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    // Allocate a buffer larger than the L2 cache, so that we can clear L2 between runs
+    size_t bufferSize = 128 * 1024 * 1024;
+    void* d_l2_buffer;
+    cudaMalloc(&d_l2_buffer, bufferSize);
+
     // Setup implementation
     if (benchmark) implementation->setup(reinterpret_cast<uint64_t*>(d_bitmask), numElements); // Warmup
-    ChTimer setupTimer;
-    setupTimer.start();
+    double setupTimeTotal = 0;
+    double setupBandwidthTotal = 0;
     for (int i = 0; i < iterations; i++) {
+        // Ensure we don't have caching effects from previous runs
+        cudaMemset(d_l2_buffer, 0, bufferSize);
+        cudaDeviceSynchronize();
+
+        ChTimer setupTimer;
+        setupTimer.start();
         implementation->setup(reinterpret_cast<uint64_t*>(d_bitmask), numElements);
+        cudaDeviceSynchronize();
+        setupTimer.stop();
+        setupTimeTotal += setupTimer.getTime();
+        setupBandwidthTotal += 1e-9 * setupTimer.getBandwidth(numElements * sizeof(long));
     }
-    cudaDeviceSynchronize();
-    setupTimer.stop();
 
     // Copy full tree back and print structure
     cudaMemcpy(h_bitmask, d_bitmask, static_cast<size_t>(treeSize), cudaMemcpyDeviceToHost);
@@ -256,15 +623,48 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    int expandedSize = numElements * sizeof(long) * CHAR_BIT;
+    int *d_src;
+    cudaMalloc(&d_src, static_cast<size_t>(expandedSize * sizeof(int)));
+    int *d_dst;
+    cudaMalloc(&d_dst, static_cast<size_t>(expandedSize * sizeof(int)));
+    printf("Expanded Size: %d\n", expandedSize);
+    bool pack = chCommandLineGetBool("pack", argc, argv);
+    bool unpack = chCommandLineGetBool("unpack", argc, argv);
+
     // Apply implementation, producing a full permutation
-    if (benchmark) implementation->apply(d_permutation, packedSize);
-    ChTimer applyTimer;
-    applyTimer.start();
-    for (int i = 0; i < iterations; i++) {
-        implementation->apply(d_permutation, packedSize);
+    if (benchmark) {
+        if (pack) {
+            implementation->pack(d_src, d_dst, packedSize);
+        } else if (unpack) {
+            implementation->unpack(d_src, d_dst, packedSize);
+        } else {
+            implementation->apply(d_permutation, packedSize);
+        }
     }
-    cudaDeviceSynchronize();
-    applyTimer.stop();
+    double applyTimeTotal = 0;
+    double applyBandwidthTotal = 0;
+    size_t bandwidthBaseSize = numElements * sizeof(long); // Bitmask size as reference
+    if (pack || unpack) bandwidthBaseSize = static_cast<size_t>(expandedSize) * sizeof(int); // Expanded size as reference
+    for (int i = 0; i < iterations; i++) {
+        // Ensure we don't have caching effects from previous runs
+        cudaMemset(d_l2_buffer, 0, bufferSize);
+        cudaDeviceSynchronize();
+
+        ChTimer applyTimer;
+        applyTimer.start();
+        if (pack) {
+            implementation->pack(d_src, d_dst, packedSize);
+        } else if (unpack) {
+            implementation->unpack(d_src, d_dst, packedSize);
+        } else {
+            implementation->apply(d_permutation, packedSize);
+        }
+        cudaDeviceSynchronize();
+        applyTimer.stop();
+        applyTimeTotal += applyTimer.getTime();
+        applyBandwidthTotal += 1e-9 * applyTimer.getBandwidth(bandwidthBaseSize);
+    }
 
     // Check for Errors
     cudaError = cudaGetLastError();
@@ -292,20 +692,27 @@ int main(int argc, char *argv[])
                 exit(1);
             }
         }
+        cudaFreeHost(h_permutation);
     }
 
     // Calculate and print benchmark results
     if (benchmark) {
-        printf("Setup Time: %f ms\n", 1e3 * setupTimer.getTime() / iterations);
-        printf("Setup Bandwidth: %f GB/s\n", 1e-9 * setupTimer.getBandwidth(numElements * sizeof(long)) * iterations);
+        printf("Setup Time: %f ms\n", 1e3 * setupTimeTotal / iterations);
+        printf("Setup Bandwidth: %f GB/s\n", setupBandwidthTotal / iterations);
 
-        printf("Apply Time: %f ms\n", 1e3 * applyTimer.getTime() / iterations);
-        printf("Apply Bandwidth: %f GB/s\n", 1e-9 * applyTimer.getBandwidth(numElements * sizeof(long)) * iterations);
-
-        ChTimer totalTimer = setupTimer + applyTimer;
-        printf("Total Time: %f ms\n", 1e3 * totalTimer.getTime() / iterations);
-        printf("Total Bandwidth: %f GB/s\n", 1e-9 * totalTimer.getBandwidth(numElements * sizeof(long)) * iterations);
+        printf("Apply Time: %f ms\n", 1e3 * applyTimeTotal / iterations);
+        printf("Apply Bandwidth: %f GB/s\n", applyBandwidthTotal / iterations);
     }
+
+    // Free device memory
+    cudaFree(d_bitmask);
+    cudaFree(d_permutation);
+    cudaFree(d_src);
+    cudaFree(d_dst);
+    cudaFree(d_l2_buffer);
+
+    // Free host pinned memory
+    cudaFreeHost(h_bitmask);
 
     return 0;
 }
