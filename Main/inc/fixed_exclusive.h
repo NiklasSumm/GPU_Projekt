@@ -192,11 +192,11 @@ class FixedExclusive : public EncodingBase {
         bool init = false; // Track if we initialised already
         void *d_temp_storage = nullptr;
         size_t temp_storage_bytes = 0;
-
-        const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-        const int longsPerLayer1Value = 1 << (layer1Size - 6);
 	
 	public:
+        const constexpr int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
+        const constexpr int longsPerLayer1Value = 1 << (layer1Size - 6);
+
 		void setup(uint64_t *d_bitmask, int n) {
             // gridSize = n devided by number of longs each block handles
             int gridSize = (n + longsPerLayer2Value - 1) / longsPerLayer2Value;
