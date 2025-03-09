@@ -146,6 +146,7 @@ applyDynamicExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeSt
 
 			int searchIndex = 0;
 
+            #pragma unroll 5
 			for (int searchStep = nextPowOf2 >> 1; searchStep > 0; searchStep >>= 1){
 				int testIndex = min(searchIndex + searchStep, layerSize - 1);
 				searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
