@@ -1,7 +1,7 @@
 #include <cub/cub.cuh>
 #include <encodingBase.h>
 
-template <int longsPerLayer1Value, int longsPerLayer2Value>
+template <int blockSize, int longsPerLayer1Value, int longsPerLayer2Value>
 __global__ void
 setupKernelFixedInclusive(int numElements, uint64_t *input)
 {	
@@ -17,7 +17,7 @@ setupKernelFixedInclusive(int numElements, uint64_t *input)
 
     unsigned int elementId;
     unsigned int thread_data;
-    if (threadIdx.x < (1 << (layer1Size + layer2Size - 6))) //if there are more threads than needed, some wont perform any calculations
+    if (threadIdx.x < longsPerLayer2Value) //if there are more threads than needed, some wont perform any calculations
     {
         for (int i = 0; i < iterations; i++) {
             elementId = blockIdx.x * longsPerLayer2Value + i * blockDim.x + threadIdx.x;
