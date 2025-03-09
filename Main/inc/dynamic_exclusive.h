@@ -145,9 +145,8 @@ applyDynamicExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeSt
             int nextPowOf2 = getNextLargestPowerOf2(layerSize);
 
 			int searchIndex = 0;
-			int searchStep = nextPowOf2; //cuda::std::bit_ceil<int>(layerSize);
 
-			for (int seatchStep = nextPowOf2 >> 1; searchStep > 0; searchStep >>= 1){
+			for (int searchStep = nextPowOf2 >> 1; searchStep > 0; searchStep >>= 1){
 				int testIndex = min(searchIndex + searchStep, layerSize - 1);
 				searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
                 searchStep >>= 1;
