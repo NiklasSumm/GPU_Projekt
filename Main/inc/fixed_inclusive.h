@@ -1,14 +1,10 @@
 #include <cub/cub.cuh>
 #include <encodingBase.h>
 
-// layer1- and layer2Size as power of 2 => layer1Size = 8 means one value of layer 1 accumulates 2^8 bits from the bit mask
-template <int blockSize, int layer1Size, int layer2Size>
+template <int longsPerLayer1Value, int longsPerLayer2Value>
 __global__ void
 setupKernelFixedInclusive(int numElements, uint64_t *input)
 {	
-    const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-    const int longsPerLayer1Value = 1 << (layer1Size - 6);
-
     // Number of longs per layer two entry devided by block size
     // Shift operators are used to get power of two
     // layer1Size - 6  since one long already contains 2^6 bit
@@ -50,13 +46,10 @@ setupKernelFixedInclusive(int numElements, uint64_t *input)
     }
 }
 
-template <int layer1Size, int layer2Size>
+template <int longsPerLayer1Value, int longsPerLayer2Value>
 __global__ void
 applyFixedInclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStructure structure, bool unpack)
 {	
-    const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-    const int longsPerLayer1Value = 1 << (layer1Size - 6);
-
     int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (elementIdx < numPacked) {
@@ -155,11 +148,8 @@ applyFixedInclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
 
 // layerSize calculates the amount of elements per layer, regardless of the actual size on disk.
 // For the bitmask, we return the amount of integers.
-template <int layer1Size, int layer2Size>
+template <int longsPerLayer1Value, int longsPerLayer2Value>
 int layerSizeFixedInclusive(int layer, int bitmaskSize) {
-    const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-    const int longsPerLayer1Value = 1 << (layer1Size - 6);
-
     int size = bitmaskSize * 2; // Bitmask size is size in long
 
     if (layer == 1){
@@ -172,13 +162,13 @@ int layerSizeFixedInclusive(int layer, int bitmaskSize) {
     return size;
 }
 
-template <int layer1Size, int layer2Size>
+template <int longsPerLayer1Value, int longsPerLayer2Value>
 int layerOffsetIntFixedInclusive(int layer, int bitmaskSize) {
     if (layer == 0) return 0;
 
     int offset = 0;
     for (int i = 0; i < layer; i++) {
-        int size = layerSizeFixedInclusive<layer1Size,layer2Size>(i, bitmaskSize);
+        int size = layerSizeFixedInclusive<longsPerLayer1Value,longsPerLayer2Value>(i, bitmaskSize);
         if (i == 1) size = (size+1)/2;
         offset += size;
     }
@@ -201,22 +191,22 @@ class FixedInclusive : public EncodingBase {
 
             uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
             for (int layer = 0; layer < 3; layer++) {
-                ts.layers[layer] = &d_bitmask_int[layerOffsetIntFixedInclusive<layer1Size,layer2Size>(layer, n)];
-                ts.layerSizes[layer] = layerSizeFixedInclusive<layer1Size,layer2Size>(layer, n);
+                ts.layers[layer] = &d_bitmask_int[layerOffsetIntFixedInclusive<longsPerLayer1Value,longsPerLayer2Value>(layer, n)];
+                ts.layerSizes[layer] = layerSizeFixedInclusive<longsPerLayer1Value,longsPerLayer2Value>(layer, n);
             }
 
-            applyFixedInclusive<layer1Size,layer2Size><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, unpack);
+            applyFixedInclusive<longsPerLayer1Value,longsPerLayer2Value><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, unpack);
         }
 
     public:
-        void setup(uint64_t *d_bitmask, int n) {
-            const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-            const int longsPerLayer1Value = 1 << (layer1Size - 6);
+        static constexpr int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
+        static constexpr int longsPerLayer1Value = 1 << (layer1Size - 6);
 
+        void setup(uint64_t *d_bitmask, int n) {
             // gridSize = n devided by number of longs each block handles
             int gridSize = (n + longsPerLayer2Value - 1) / longsPerLayer2Value;
 
-            setupKernelFixedInclusive<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
+            setupKernelFixedInclusive<blockSize,longsPerLayer1Value,longsPerLayer2Value><<<gridSize, blockSize>>>(n, d_bitmask);
 
             // offset for layer 2 in number of ints => bitmask size + layer 1 size
             // bitmarks size n * 2 since n is number of longs
@@ -255,9 +245,6 @@ class FixedInclusive : public EncodingBase {
         };
 
         void print(uint64_t *h_bitmask) {
-            const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-            const int longsPerLayer1Value = 1 << (layer1Size - 6);
-
             // Print bitmask
             if (n < 100) {
                 std::cout << "bitmask: ";
