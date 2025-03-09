@@ -184,9 +184,6 @@ int layerOffsetIntFixedExclusive(int layer, int bitmaskSize) {
 
 template <int blockSize, int layer1Size, int layer2Size>
 class FixedExclusive : public EncodingBase {
-    const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-    const int longsPerLayer1Value = 1 << (layer1Size - 6);
-
 	private:
 		uint64_t *d_bitmask;
 		int n;
@@ -198,6 +195,9 @@ class FixedExclusive : public EncodingBase {
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
+
+		const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
+    		const int longsPerLayer1Value = 1 << (layer1Size - 6);
             // gridSize = n devided by number of longs each block handles
             int gridSize = (n + longsPerLayer2Value - 1) / longsPerLayer2Value;
 
@@ -228,6 +228,9 @@ class FixedExclusive : public EncodingBase {
         };
 
         void apply(int *permutation, int packedSize) {
+    const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
+    const int longsPerLayer1Value = 1 << (layer1Size - 6);
+		
             TreeStructure ts;
 
             uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
@@ -240,6 +243,8 @@ class FixedExclusive : public EncodingBase {
         };
 
         void pack(int *src, int *dst, int packedSize) {
+		const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
+    		const int longsPerLayer1Value = 1 << (layer1Size - 6);
             TreeStructure ts;
 
             uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
@@ -252,6 +257,8 @@ class FixedExclusive : public EncodingBase {
         };
 
         void unpack(int *src, int *dst, int packedSize) {
+		const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
+    		const int longsPerLayer1Value = 1 << (layer1Size - 6);
             TreeStructure ts;
 
             uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
@@ -264,6 +271,8 @@ class FixedExclusive : public EncodingBase {
         };
 
         void print(uint64_t *h_bitmask) {
+		const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
+    		const int longsPerLayer1Value = 1 << (layer1Size - 6);
             // Print bitmask
             if (n < 100) {
                 std::cout << "bitmask: ";
