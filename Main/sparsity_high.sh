@@ -1,7 +1,7 @@
 #!/bin/bash
 
 iterations=10
-size=16777216
+size=8388608
 sparsity_options="0.20 0.60 0.80 0.90 0.95 0.975 0.9875 0.99375 0.996875 0.9984375 0.99921875"
 implementations="dynamicExclusive fixedInclusive fixedExclusive baseline baselineSetupLess"
 
@@ -12,7 +12,7 @@ for sparsity in $sparsity_options; do
     echo -n "$sparsity" >> sparsity_bandwidth_high.csv
     for impl in $implementations; do
         echo "$impl"
-        output=$(./bin/project --benchmark --$impl --i $iterations --s $size --sparsity $sparsity)
+        output=$(./bin/project --benchmark --$impl --i $iterations --s $size --sparsity $sparsity --pack)
         echo "$output"
 
         bw_apply=`echo "$output" | awk '/Apply Bandwidth:/ {print $3}'`

@@ -182,17 +182,22 @@ class FixedInclusive : public EncodingBase {
         uint64_t *d_bitmask;
         int n;
 
-    void applyImplementation(int *dst, int *src, int packedSize, bool unpack) {
-        TreeStructure ts;
+        // Used for setup, cached between multiple calls
+        bool init = false; // Track if we initialised already
+        void *d_temp_storage = nullptr;
+        size_t temp_storage_bytes = 0;
 
-        uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
-        for (int layer = 0; layer < 3; layer++) {
-            ts.layers[layer] = &d_bitmask_int[layerOffsetIntFixedInclusive<layer1Size,layer2Size>(layer, n)];
-            ts.layerSizes[layer] = layerSizeFixedInclusive<layer1Size,layer2Size>(layer, n);
+        void applyImplementation(int *dst, int *src, int packedSize, bool unpack) {
+            TreeStructure ts;
+
+            uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
+            for (int layer = 0; layer < 3; layer++) {
+                ts.layers[layer] = &d_bitmask_int[layerOffsetIntFixedInclusive<layer1Size,layer2Size>(layer, n)];
+                ts.layerSizes[layer] = layerSizeFixedInclusive<layer1Size,layer2Size>(layer, n);
+            }
+
+            applyFixedInclusive<layer1Size,layer2Size><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, unpack);
         }
-
-        applyFixedInclusive<layer1Size,layer2Size><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, unpack);
-    }
 
     public:
         void setup(uint64_t *d_bitmask, int n) {
@@ -210,18 +215,16 @@ class FixedInclusive : public EncodingBase {
             unsigned int *startPtr = &reinterpret_cast<unsigned int*>(d_bitmask)[offset];
 
             // Determine temporary device storage requirements
-            void *d_temp_storage = nullptr;
-            size_t temp_storage_bytes = 0;
-            cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
+            if (!init) {
+                cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
 
-            // Allocate temporary storage
-            cudaMalloc(&d_temp_storage, temp_storage_bytes);
+                // Allocate temporary storage
+                cudaMalloc(&d_temp_storage, temp_storage_bytes);
+                init = true;
+            }
 
             // Run exclusive prefix sum
             cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, startPtr, startPtr, size);
-
-            // Free temporary storage
-            cudaFree(d_temp_storage);
 
             this->d_bitmask = d_bitmask;
             this->n = n;
@@ -274,4 +277,11 @@ class FixedInclusive : public EncodingBase {
                 std::cout << std::endl;
             }
         };
+
+        ~FixedInclusive() {
+            if (init) {
+                // Free temporary storage
+                cudaFree(d_temp_storage);
+            }
+        }
 };

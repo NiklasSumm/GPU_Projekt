@@ -10,6 +10,8 @@
 #include <thrust/sequence.h>
 #include <thrust/gather.h>
 #include <thrust/scatter.h>
+#include <thrust/detail/caching_allocator.h>
+#include <thrust/system/cuda/execution_policy.h>
 
 #include <encodingBase.h>
 
@@ -66,6 +68,7 @@ class ThrustBaseline : public EncodingBase {
         uint64_t *d_bitmask;
         int n;
         bool setupLess = false;
+        thrust::mr::allocator<char, thrust::mr::disjoint_unsynchronized_pool_resource<thrust::device_memory_resource, thrust::mr::new_delete_resource>> allocator = thrust::detail::single_device_tls_caching_allocator();
 
     public:
         ThrustBaseline(int packedSize) {
@@ -75,16 +78,16 @@ class ThrustBaseline : public EncodingBase {
         ThrustBaseline(): setupLess(true) {} // Implicitely switches to setup-less implementation
 
         void setup(uint64_t *d_bitmask, int n) {
+            this->d_bitmask = d_bitmask;
+            this->n = n;
+
             if (!setupLess) {
-                const auto bool_iter = make_mask2bool_iterator(d_bitmask);
+                const auto bool_iter = make_mask2bool_iterator(thrust::device_ptr<uint64_t>(d_bitmask));
                 const auto num_bools = num_bits<uint64_t>() * n;
 
                 thrust::counting_iterator<int> iter(0);
-                thrust::copy_if(thrust::device, iter, iter + num_bools, bool_iter, d_inverse_permutation, cuda::std::identity{});
+                thrust::copy_if(thrust::cuda::par(allocator), iter, iter + num_bools, bool_iter, thrust::device_ptr<uint32_t>(d_inverse_permutation), cuda::std::identity{});
             }
-
-            this->d_bitmask = d_bitmask;
-            this->n = n;
         };
 
         void apply(int *permutation, int packedSize) {
@@ -96,24 +99,24 @@ class ThrustBaseline : public EncodingBase {
                 const auto num_bools = num_bits<uint64_t>() * n;
 
                 thrust::counting_iterator<int> iter(0);
-                thrust::copy_if(thrust::device, iter, iter + num_bools, bool_iter, permutation, cuda::std::identity{});
+                thrust::copy_if(thrust::cuda::par(allocator), iter, iter + num_bools, bool_iter, static_cast<thrust::device_ptr<int>>(permutation), cuda::std::identity{});
             }
         };
 
         void pack(int *src, int *dst, int packedSize) {
             if (!setupLess) {
-                thrust::gather(thrust::device, d_inverse_permutation, d_inverse_permutation + packedSize, src, dst);
+                thrust::gather(thrust::cuda::par(allocator), d_inverse_permutation, d_inverse_permutation + packedSize, src, dst);
             } else {
                 const auto bool_iter = make_mask2bool_iterator(d_bitmask);
                 const auto num_bools = num_bits<uint64_t>() * n;
 
-                thrust::copy_if(thrust::device, src, src + num_bools, bool_iter, dst, cuda::std::identity{});
+                thrust::copy_if(thrust::cuda::par(allocator), src, src + num_bools, bool_iter, dst, cuda::std::identity{});
             }
         };
 
         void unpack(int *src, int *dst, int packedSize) {
             if (!setupLess) {
-                thrust::scatter(thrust::device, src, src + packedSize, d_inverse_permutation, dst);
+                thrust::scatter(thrust::cuda::par(allocator), src, src + packedSize, d_inverse_permutation, dst);
             } else {
                 const auto bool_iter = make_mask2bool_iterator(d_bitmask);
                 const auto num_bools = num_bits<uint64_t>() * n;
@@ -121,7 +124,7 @@ class ThrustBaseline : public EncodingBase {
                 auto tabulate_it = thrust::make_tabulate_output_iterator(fetch_write{dst, src});
 
                 thrust::counting_iterator<int> iter(0);
-                thrust::copy_if(thrust::device, iter, iter + num_bools, bool_iter, tabulate_it, cuda::std::identity{});
+                thrust::copy_if(thrust::cuda::par(allocator), iter, iter + num_bools, bool_iter, tabulate_it, cuda::std::identity{});
             }
         };
 

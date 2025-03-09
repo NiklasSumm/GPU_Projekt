@@ -739,6 +739,9 @@ void printHelp(char *argv)
               << "  --sparsity <fraction>" << std::endl
               << "    Control the fraction of how many bits in the mask are 0 (default: dense bitmask, sparsity 0.0)" << std::endl
               << "" << std::endl
+              << "  --pack/unpack" << std::endl
+              << "    Apply the implementation to pack or unpack an array of int instead of producing a permutation for validation." << std::endl
+              << "" << std::endl
               << "  --dynamicExclusive" << std::endl
               << "    Use tree implementation with dynamic layer count and fixed steps of 2^5 between layers, allowing for collaborative descend" << std::endl
               << "" << std::endl
