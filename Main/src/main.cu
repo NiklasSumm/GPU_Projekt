@@ -136,10 +136,13 @@ int main(int argc, char *argv[])
     int layer2Size = 8;
     chCommandLineGet<int>(&layer2Size, "layer2Size", argc, argv);
 
+    int groupSize = 1;
+    chCommandLineGet<int>(&groupSize, "groupSize", argc, argv);
+
     // Generate bitmask
     long *d_bitmask;
     cudaMalloc(&d_bitmask, static_cast<size_t>(treeSize));
-    populateBitmask<<<(numElements*2 + 1023)/1024, 1024>>>(numElements*2, reinterpret_cast<uint32_t*>(d_bitmask), sparsity, 8);
+    populateBitmask<<<(numElements*2 + 1023)/1024, 1024>>>(numElements*2, reinterpret_cast<uint32_t*>(d_bitmask), sparsity, groupSize);
     cudaDeviceSynchronize();
 
     // Copy bitmask back to host and count packed size
