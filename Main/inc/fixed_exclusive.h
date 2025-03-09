@@ -3,13 +3,10 @@
 
 
 //layer1- and layer2Size as power of 2 => layer1Size = 8 means one value of layer 1 accumulates 2^8 bits from the bit mask
-template <int blockSize, int layer1Size, int layer2Size>
+template <int blockSize, int longsPerLayer1Value, int longsPerLayer2Value>
 __global__ void
 setupKernelFixedExclusive(int numElements, uint64_t *input)
 {
-    const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-    const int longsPerLayer1Value = 1 << (layer1Size - 6);
-
     // Number of longs per layer two entry devided by block size
     // Shift operators are used to get power of two
     // layer1Size - 6  since one long already contains 2^6 bit
@@ -53,13 +50,10 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
     }
 }
 
-template <int layer1Size, int layer2Size>
+template <int longsPerLayer1Value, int longsPerLayer2Value>
 __global__ void
 applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStructure structure, bool unpack)
 {
-    const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-    const int longsPerLayer1Value = 1 << (layer1Size - 6);
-
     int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (elementIdx < numPacked) {
@@ -161,11 +155,8 @@ applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
 
 // layerSize calculates the amount of elements per layer, regardless of the actual size on disk.
 // For the bitmask, we return the amount of integers.
-template <int layer1Size, int layer2Size>
+template <int longsPerLayer1Value, int longsPerLayer2Value>
 int layerSizeFixedExclusive(int layer, int bitmaskSize) {
-    const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-    const int longsPerLayer1Value = 1 << (layer1Size - 6);
-
     int size = bitmaskSize * 2; // Bitmask size is size in long
 
 	if (layer == 1){
@@ -178,13 +169,13 @@ int layerSizeFixedExclusive(int layer, int bitmaskSize) {
     return size;
 }
 
-template <int layer1Size, int layer2Size>
+template <int longsPerLayer1Value, int longsPerLayer2Value>
 int layerOffsetIntFixedExclusive(int layer, int bitmaskSize) {
     if (layer == 0) return 0;
 
     int offset = 0;
     for (int i = 0; i < layer; i++) {
-        int size = layerSizeFixedExclusive<layer1Size, layer2Size>(i, bitmaskSize);
+        int size = layerSizeFixedExclusive<longsPerLayer1Value, longsPerLayer2Value>(i, bitmaskSize);
         if (i == 1) size = (size+1)/2;
         offset += size;
     }
@@ -193,6 +184,9 @@ int layerOffsetIntFixedExclusive(int layer, int bitmaskSize) {
 
 template <int blockSize, int layer1Size, int layer2Size>
 class FixedExclusive : public EncodingBase {
+    const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
+    const int longsPerLayer1Value = 1 << (layer1Size - 6);
+
 	private:
 		uint64_t *d_bitmask;
 		int n;
@@ -204,13 +198,10 @@ class FixedExclusive : public EncodingBase {
 	
 	public:
 		void setup(uint64_t *d_bitmask, int n) {
-            const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-            const int longsPerLayer1Value = 1 << (layer1Size - 6);
-
             // gridSize = n devided by number of longs each block handles
             int gridSize = (n + longsPerLayer2Value - 1) / longsPerLayer2Value;
 
-            setupKernelFixedExclusive<blockSize,layer1Size,layer2Size><<<gridSize, blockSize>>>(n, d_bitmask);
+            setupKernelFixedExclusive<blockSize,longsPerLayer1Value,longsPerLayer2Value><<<gridSize, blockSize>>>(n, d_bitmask);
 
             // offset for layer 2 in number of ints => bitmask size + layer 1 size
             // bitmarks size n * 2 since n is number of longs
@@ -241,11 +232,11 @@ class FixedExclusive : public EncodingBase {
 
             uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
             for (int layer = 0; layer < 3; layer++) {
-                ts.layers[layer] = &d_bitmask_int[layerOffsetIntFixedExclusive<layer1Size,layer2Size>(layer, n)];
-                ts.layerSizes[layer] = layerSizeFixedExclusive<layer1Size,layer2Size>(layer, n);
+                ts.layers[layer] = &d_bitmask_int[layerOffsetIntFixedExclusive<longsPerLayer1Value,longsPerLayer2Value>(layer, n)];
+                ts.layerSizes[layer] = layerSizeFixedExclusive<longsPerLayer1Value,longsPerLayer2Value>(layer, n);
             }
 
-            applyFixedExclusive<layer1Size, layer2Size><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, permutation, nullptr, n, ts, false);
+            applyFixedExclusive<longsPerLayer1Value, longsPerLayer2Value><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, permutation, nullptr, n, ts, false);
         };
 
         void pack(int *src, int *dst, int packedSize) {
@@ -253,11 +244,11 @@ class FixedExclusive : public EncodingBase {
 
             uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
             for (int layer = 0; layer < 3; layer++) {
-                ts.layers[layer] = &d_bitmask_int[layerOffsetIntFixedExclusive<layer1Size, layer2Size>(layer, n)];
-                ts.layerSizes[layer] = layerSizeFixedExclusive<layer1Size, layer2Size>(layer, n);
+                ts.layers[layer] = &d_bitmask_int[layerOffsetIntFixedExclusive<longsPerLayer1Value, longsPerLayer2Value>(layer, n)];
+                ts.layerSizes[layer] = layerSizeFixedExclusive<longsPerLayer1Value, longsPerLayer2Value>(layer, n);
             }
 
-            applyFixedExclusive<layer1Size, layer2Size><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, false);
+            applyFixedExclusive<longsPerLayer1Value, longsPerLayer2Value><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, false);
         };
 
         void unpack(int *src, int *dst, int packedSize) {
@@ -265,17 +256,14 @@ class FixedExclusive : public EncodingBase {
 
             uint32_t *d_bitmask_int = reinterpret_cast<uint32_t*>(d_bitmask);
             for (int layer = 0; layer < 3; layer++) {
-                ts.layers[layer] = &d_bitmask_int[layerOffsetIntFixedExclusive<layer1Size, layer2Size>(layer, n)];
-                ts.layerSizes[layer] = layerSizeFixedExclusive<layer1Size, layer2Size>(layer, n);
+                ts.layers[layer] = &d_bitmask_int[layerOffsetIntFixedExclusive<longsPerLayer1Value, longsPerLayer2Value>(layer, n)];
+                ts.layerSizes[layer] = layerSizeFixedExclusive<longsPerLayer1Value, longsPerLayer2Value>(layer, n);
             }
 
-            applyFixedExclusive<layer1Size, layer2Size><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, true);
+            applyFixedExclusive<longsPerLayer1Value, longsPerLayer2Value><<<(packedSize+blockSize-1)/blockSize, blockSize>>>(packedSize, dst, src, n, ts, true);
         };
 
         void print(uint64_t *h_bitmask) {
-            const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
-            const int longsPerLayer1Value = 1 << (layer1Size - 6);
-
             // Print bitmask
             if (n < 100) {
                 std::cout << "bitmask: ";
