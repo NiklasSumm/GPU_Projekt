@@ -147,10 +147,10 @@ applyDynamicExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeSt
 			int searchIndex = 0;
 			int searchStep = nextPowOf2; //cuda::std::bit_ceil<int>(layerSize);
 
-			while (searchStep > 1){
-				searchStep >>= 1;
+			for (int seatchStep = nextPowOf2 >> 1; searchStep > 0; searchStep >>= 1){
 				int testIndex = min(searchIndex + searchStep, layerSize - 1);
 				searchIndex += (static_cast<uint32_t>(layer[testIndex]) < bitsToFind) * searchStep;
+                searchStep >>= 1;
 			}
 			searchIndex = min(searchIndex, layerSize - 1);
 			uint32_t layerSum = static_cast<uint32_t>(layer[searchIndex]);
