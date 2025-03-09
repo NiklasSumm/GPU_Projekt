@@ -9,7 +9,6 @@ setupKernelFixedExclusive(int numElements, uint64_t *input)
 {
     const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
     const int longsPerLayer1Value = 1 << (layer1Size - 6);
-    const int layer1ValuesPerLayer2Value = 1 << (layer2Size);
 
     // Number of longs per layer two entry devided by block size
     // Shift operators are used to get power of two
@@ -60,7 +59,6 @@ applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
 {
     const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
     const int longsPerLayer1Value = 1 << (layer1Size - 6);
-    const int layer1ValuesPerLayer2Value = 1 << (layer2Size);
 
     int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -167,7 +165,6 @@ template <int layer1Size, int layer2Size>
 int layerSizeFixedExclusive(int layer, int bitmaskSize) {
     const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
     const int longsPerLayer1Value = 1 << (layer1Size - 6);
-    const int layer1ValuesPerLayer2Value = 1 << (layer2Size);
 
     int size = bitmaskSize * 2; // Bitmask size is size in long
 
@@ -209,7 +206,6 @@ class FixedExclusive : public EncodingBase {
 		void setup(uint64_t *d_bitmask, int n) {
             const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
             const int longsPerLayer1Value = 1 << (layer1Size - 6);
-            const int layer1ValuesPerLayer2Value = 1 << (layer2Size);
 
             // gridSize = n devided by number of longs each block handles
             int gridSize = (n + longsPerLayer2Value - 1) / longsPerLayer2Value;
@@ -279,7 +275,6 @@ class FixedExclusive : public EncodingBase {
         void print(uint64_t *h_bitmask) {
             const int longsPerLayer2Value = 1 << (layer2Size + layer1Size - 6);
             const int longsPerLayer1Value = 1 << (layer1Size - 6);
-            const int layer1ValuesPerLayer2Value = 1 << (layer2Size);
 
             // Print bitmask
             if (n < 100) {
