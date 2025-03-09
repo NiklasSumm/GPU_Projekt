@@ -52,23 +52,55 @@ int* packedPermutation(int packedSize, int expandedSize, long* h_bitmask) {
 __global__ void
 populateBitmask(int numElements, uint32_t *bitmask, float sparsity, int groupSize)
 {
-    int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
+    int elementsPerGroup = max(1, groupSize / 32); // Wie viele 32-bit-Werte pro Gruppe
+    int groupIdx = (blockIdx.x * blockDim.x + threadIdx.x) / elementsPerGroup; // Gruppenindex
+    int localIdx = (blockIdx.x * blockDim.x + threadIdx.x) % elementsPerGroup; // Position innerhalb der Gruppe
 
-    if (elementIdx < numElements) {
+    if (groupIdx * elementsPerGroup >= numElements) return;
 
-        curandState state;
-        //int offset = (elementIdx / (groupSize / 32)) * 32;
-        curand_init(1234, elementIdx, 0, &state);
+    curandState state;
+    curand_init(1234, groupIdx, 0, &state); // Jede Gruppe bekommt ihre eigene PRNG-Sequenz
 
-        uint32_t element = 0xffffffff;
-        for (uint32_t k = 0; k < sizeof(element) * 8; k += groupSize) {
+    if (groupSize >= 32) {
+        // Fall: groupSize >= 32 (über mehrere uint32_t)
+        bool setZero = (curand_uniform(&state) < sparsity);
+
+        if (groupIdx * elementsPerGroup + localIdx < numElements) {
+            bitmask[groupIdx * elementsPerGroup + localIdx] = setZero ? 0x00000000 : 0xffffffff;
+        }
+    } else {
+        // Fall: groupSize < 32 (innerhalb eines einzigen uint32_t)
+        int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (elementIdx >= numElements) return;
+
+        uint32_t element = 0xffffffff; // Standard: Alle Bits auf 1
+
+        for (uint32_t k = 0; k < 32; k += groupSize) {
+            uint32_t mask = ((1u << groupSize) - 1) << k; // Sichere Maske für kleinere Gruppen
             if (curand_uniform(&state) < sparsity) {
-                // element |= 1 << k;
-                element &= ~(((1 << groupSize) - 1) << k);
+                element &= ~mask; // Setze groupSize Bits auf 0
             }
         }
         bitmask[elementIdx] = element;
     }
+
+    //int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
+//
+    //if (elementIdx < numElements) {
+//
+    //    curandState state;
+    //    //int offset = (elementIdx / (groupSize / 32)) * 32;
+    //    curand_init(1234, elementIdx, 0, &state);
+//
+    //    uint32_t element = 0xffffffff;
+    //    for (uint32_t k = 0; k < sizeof(element) * 8; k += groupSize) {
+    //        if (curand_uniform(&state) < sparsity) {
+    //            // element |= 1 << k;
+    //            element &= ~(((1 << groupSize) - 1) << k);
+    //        }
+    //    }
+    //    bitmask[elementIdx] = element;
+    //}
 }
 
 //
