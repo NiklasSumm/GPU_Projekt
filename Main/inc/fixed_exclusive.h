@@ -91,7 +91,7 @@ applyFixedExclusive(int numPacked, int *dst, int *src, int bitmaskSize, TreeStru
 				bitsToFind -= layerSum;
 				nextLayerOffset += searchIndex;
 			}
-			nextLayerOffset *= layer1ValuesPerLayer2Value;
+			nextLayerOffset *= (longsPerLayer2Value / longsPerLayer1Value);
 		}
 
         // Handle layer 1
