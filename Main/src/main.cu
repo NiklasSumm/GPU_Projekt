@@ -57,7 +57,7 @@ populateBitmask(int numElements, uint32_t *bitmask, float sparsity, int groupSiz
     if (elementIdx < numElements) {
 
         curandState state;
-        int offset = (elementIdx / (groupSize / 32)) * groupSize;
+        int offset = (elementIdx / (groupSize / 32)) * 32;
         curand_init(1234, 0, offset, &state);
 
         uint32_t element = 0xffffffff;
