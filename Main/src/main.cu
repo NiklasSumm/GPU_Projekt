@@ -50,7 +50,7 @@ int* packedPermutation(int packedSize, int expandedSize, long* h_bitmask) {
 }
 
 __global__ void
-populateBitmask(int numElements, uint32_t *bitmask, float sparsity)
+populateBitmask(int numElements, uint32_t *bitmask, float sparsity, int groupSize)
 {
     int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -60,10 +60,10 @@ populateBitmask(int numElements, uint32_t *bitmask, float sparsity)
         curand_init(1234, elementIdx, 0, &state);
 
         uint32_t element = 0xffffffff;
-        for (uint32_t k = 0; k < sizeof(element) * 8; k++) {
+        for (uint32_t k = 0; k < sizeof(element) * 8; k += groupSize) {
             if (curand_uniform(&state) < sparsity) {
                 // element |= 1 << k;
-                element &= ~(1 << k);
+                element &= ~(((1 << groupSize) - 1) << k);
             }
         }
         bitmask[elementIdx] = element;
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
     // Generate bitmask
     long *d_bitmask;
     cudaMalloc(&d_bitmask, static_cast<size_t>(treeSize));
-    populateBitmask<<<(numElements*2 + 1023)/1024, 1024>>>(numElements*2, reinterpret_cast<uint32_t*>(d_bitmask), sparsity);
+    populateBitmask<<<(numElements*2 + 1023)/1024, 1024>>>(numElements*2, reinterpret_cast<uint32_t*>(d_bitmask), sparsity, 8);
     cudaDeviceSynchronize();
 
     // Copy bitmask back to host and count packed size
